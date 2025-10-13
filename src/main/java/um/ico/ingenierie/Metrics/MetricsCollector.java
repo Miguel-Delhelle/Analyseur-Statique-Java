@@ -1,6 +1,8 @@
 package um.ico.ingenierie.Metrics;
 
 import org.eclipse.jdt.core.dom.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import um.ico.ingenierie.Exceptions.NoCompilationUnitExceptions;
 import um.ico.ingenierie.Exceptions.NoMetricsDataException;
 import um.ico.ingenierie.abstractSource.AbstractSourceAttributs;
@@ -9,6 +11,7 @@ import um.ico.ingenierie.abstractSource.AbstractSourceMethods;
 import um.ico.ingenierie.abstractSource.AbstractSourcePackage;
 import um.ico.ingenierie.graph.CallGraph;
 import um.ico.ingenierie.graph.EdgeType;
+import um.ico.ingenierie.traitementFile.CodeAnalyzer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +23,8 @@ public class MetricsCollector {
     private CompilationUnit cu;
     private MetricsData metricsData;
     private CallGraph callGraph = new CallGraph();
+
+    private static final Logger log = LoggerFactory.getLogger(MetricsCollector.class);
 
     //TODO Refactor pour voir si c'est tjrs nécessaire, et faut enlever la logique atomique
     //AtomicInteger numberOfPackage = new AtomicInteger(0);
