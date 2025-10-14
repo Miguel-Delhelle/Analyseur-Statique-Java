@@ -31,4 +31,12 @@ public class Edge {
     public int hashCode() {
         return java.util.Objects.hash(calleeSignature, type);
     }
+
+    @Override
+    public String toString() {
+        return "Edge{" +
+                "calleeSignature='" + calleeSignature + '\'' +
+                ", type=" + type +
+                '}';
+    }
 }

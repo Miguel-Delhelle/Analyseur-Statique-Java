@@ -9,7 +9,6 @@ import java.util.*;
  * @version ALPHA_BEFORE_SPRING
  */
 
-@Deprecated(since = "CallGraph utilise l'ancienne logique d'avant la logique Spring -- Appli Web")
 public class CallGraph {
 
     // Caller Method Signature -> Set of Callee Method Signatures
@@ -20,6 +19,9 @@ public class CallGraph {
         adjacencyList.computeIfAbsent(calleeSignature, k -> new HashSet<>());
         adjacencyList.get(callerSignature).add(new Edge(calleeSignature, type));
     }
+
+
+
 
     /**
      * Génère une représentation du graphe au format DOT, en filtrant

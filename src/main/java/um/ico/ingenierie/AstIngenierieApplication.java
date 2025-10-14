@@ -27,6 +27,9 @@ public class AstIngenierieApplication {
         // 2. Écrire ce contenu dans un fichier "graph.dot"
         Files.writeString(Paths.get("graph.dot"), dotRepresentation);
 
+        String toutleCode = codeAnalyzer.getJavaFilesHandler().javaToString();
+
+        Files.writeString(Paths.get("ToutLeCode.txt"), toutleCode);
 
     }
 

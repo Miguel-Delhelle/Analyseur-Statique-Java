@@ -69,6 +69,8 @@ public class AbstractSourceClass implements Serializable {
         return this.abstractAttributsSourceList.size();
     }
 
+
+
     public void addMethod(AbstractSourceMethods abstractSourceMethods){
         this.abstractSourceMethodsList.add(abstractSourceMethods);
     }
@@ -99,6 +101,14 @@ public class AbstractSourceClass implements Serializable {
         return this.getAbstractSourceMethodsList()
                 .stream()
                 .filter(abstractSourceMethods -> !abstractSourceMethods.isConstructor()).toList().size();
+    }
+
+    public String getNameOfClass() {
+        return nameOfClass;
+    }
+
+    public int getNumberOfLinesInClass() {
+        return numberOfLinesInClass;
     }
 
     @Override

@@ -8,6 +8,7 @@ import um.ico.ingenierie.results.SearchResult;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -21,13 +22,16 @@ import java.util.stream.Collectors;
 
 public class MetricsData {
 
-    public AtomicInteger numberOfClass = new AtomicInteger(0);
-    public AtomicInteger numberOfMethods = new AtomicInteger(0);
-    public AtomicInteger numberOfLines = new AtomicInteger(0);
+
+
+    //public AtomicInteger numberOfClass = new AtomicInteger(0);
+    //public AtomicInteger numberOfMethods = new AtomicInteger(0);
+    //public AtomicInteger numberOfLines = new AtomicInteger(0);
 
     //public double averageNumberOfMethodsInClass = 0.0;
 
     //public double averageNumberOfLinesInMethods = 0.0;
+
     private List<AbstractSourcePackage> abstractSourcePackageList = new ArrayList<AbstractSourcePackage>();
     private List<AbstractSourceClass> abstractSourceClassList = new ArrayList<AbstractSourceClass>();
 
@@ -47,29 +51,37 @@ public class MetricsData {
         return this.getAbstractPackageSourceList().size();
     }
 
-    public AtomicInteger getNumberOfClass() {
-        return numberOfClass;
+    public int getNumberOfClass() {
+        return getAbstractSourceClassList().size();
     }
 
-    public void setNumberOfClass(AtomicInteger numberOfClass) {
-        this.numberOfClass = numberOfClass;
+    public int getTotalNumberOfMethods() {
+        return this.abstractSourceClassList.stream()
+                .mapToInt(AbstractSourceClass::getNumberOfMethods)
+                .sum();
     }
 
-    public AtomicInteger getNumberOfMethods() {
-        return numberOfMethods;
+    public int getTotalNumberOfLines() {
+        return this.abstractSourceClassList.stream()
+                .mapToInt(value -> value.getAbstractSourceMethodsList().stream().mapToInt(AbstractSourceMethods::getNumberOfLines).sum())
+                .sum();
     }
 
-    public void setNumberOfMethods(AtomicInteger numberOfMethods) {
-        this.numberOfMethods = numberOfMethods;
-    }
+//    public AtomicInteger getNumberOfMethods() {
+//        return numberOfMethods;
+//    }
 
-    public AtomicInteger getNumberOfLines() {
-        return numberOfLines;
-    }
+//    //public void setNumberOfMethods(AtomicInteger numberOfMethods) {
+//        this.numberOfMethods = numberOfMethods;
+//    }
 
-    public void setNumberOfLines(AtomicInteger numberOfLines) {
-        this.numberOfLines = numberOfLines;
-    }
+//    public AtomicInteger getNumberOfLines() {
+//        return numberOfLines;
+//    }
+
+//    public void setNumberOfLines(AtomicInteger numberOfLines) {
+//        this.numberOfLines = numberOfLines;
+//    }
 
     public List<AbstractSourcePackage> getAbstractPackageSourceList() {
         return abstractSourcePackageList;
@@ -93,10 +105,10 @@ public class MetricsData {
     public String toString() {
         return "MetricsData{" +
                 "number of Package= " + getNumberOfPackage() +
-                ", numberOfClass=" + numberOfClass +
-                ", numberOfMethods=" + numberOfMethods +
-                ", numberOfLines=" + numberOfLines +
-                ", abstractPackageSourceList=" + abstractSourcePackageList +
+                ", numberOfClass=" + getNumberOfClass() +
+                ", numberOfMethods=" + getTotalNumberOfMethods() +
+                ", numberOfLines=" +  getTotalNumberOfLines() +
+                ", abstractPackageSourceList=" + getAbstractPackageSourceList() +
                 '}';
     }
 
@@ -117,27 +129,39 @@ public class MetricsData {
         ;
     }
 
-    public void addClass(AbstractSourceClass classe){
+    /**
+     * Ajoute une classe à la collection de métriques, en s'assurant de ne pas créer de doublons
+     * et en gérant la fusion des packages.
+     * @param classe La classe à ajouter.
+     */
+    public void addClass(AbstractSourceClass classe) {
+        if (classe == null || classe.getNameOfClass() == null) {
+            return;
+        }
+        boolean alreadyExists = abstractSourceClassList.stream()
+                .anyMatch(existingClass ->
+                        existingClass.getNameOfClass().equals(classe.getNameOfClass()) &&
+                                existingClass.getPackageParent().getName().equals(classe.getPackageParent().getName())
+                );
+        if (alreadyExists) {
+            return;
+        }
+        this.abstractSourceClassList.add(classe);
         AbstractSourcePackage paquet = classe.getPackageParent();
-        SearchResult searchResult = this.verifyPaquetExistence(paquet.getName());
-        if (searchResult.isExist()){
-            this.abstractSourcePackageList.get(searchResult.getPosition()).addClassToPackage(classe);
-            this.abstractSourceClassList.add(classe);
-        }else {
+        Optional<AbstractSourcePackage> existingPackage = abstractSourcePackageList.stream()
+                .filter(p -> p.getName().equals(paquet.getName()))
+                .findFirst();
+        if (existingPackage.isPresent()) {
+            existingPackage.get().addClassToPackage(classe);
+        } else {
             paquet.addClassToPackage(classe);
             this.abstractSourcePackageList.add(paquet);
-            this.abstractSourceClassList.add(classe);
         }
     }
 
     public double getAverageNumberMethodsByClass(){
-        double averageMethod;
-        int numberOfMethodTotal = 0;
-        for (AbstractSourceClass sourceClass : this.getAbstractSourceClassList()){
-            numberOfMethodTotal = numberOfMethodTotal+sourceClass.getAbstractSourceMethodsList().size();
-        }
-        averageMethod = numberOfMethodTotal / this.getAbstractSourceClassList().size();
-        return averageMethod;
+        if (this.getNumberOfClass() == 0){return 0.0;}
+        return (double) this.getTotalNumberOfMethods() / this.getNumberOfClass();
     }
 
     public int getAverageNumberOfLineByMethods(){
@@ -227,7 +251,7 @@ public class MetricsData {
      * @return Le nom du package de base (ex: "um.ico.ingenierie") ou une chaîne vide.
      */
     public String determineBasePackage() {
-        List<String> packageNames = this.abstractSourcePackageList.stream()
+        List<String> packageNames = this.getAbstractPackageSourceList().stream()
                 .map(AbstractSourcePackage::getName)
                 .collect(Collectors.toList());
 

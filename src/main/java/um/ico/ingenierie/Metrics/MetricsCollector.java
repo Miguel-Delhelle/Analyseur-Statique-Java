@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MetricsCollector {
 
+
+
     // Attributs légitime
     private CompilationUnit cu;
     private MetricsData metricsData;
@@ -42,9 +44,9 @@ public class MetricsCollector {
 
     //TODO Refactor pour voir si c'est tjrs nécessaire, et faut enlever la logique atomique
     //AtomicInteger numberOfPackage = new AtomicInteger(0);
-    AtomicInteger compteurClass = new AtomicInteger(0) ;
-    AtomicInteger numberOfLine = new AtomicInteger(0);
-    AtomicInteger methodCounter = new AtomicInteger(0);
+//    AtomicInteger compteurClass = new AtomicInteger(0) ;
+//    AtomicInteger numberOfLine = new AtomicInteger(0);
+//    AtomicInteger methodCounter = new AtomicInteger(0);
 
     // TODO Vérifier l'utilité de ce constructeur vide
     public MetricsCollector() {
@@ -63,105 +65,27 @@ public class MetricsCollector {
     public void collectMetrics(){
         // Verification que l'objet n'est pas invoqué bizarrement
         if (this.cu == null){throw new NoCompilationUnitExceptions();}
-        if (this.metricsData == null){throw new NoMetricsDataException();}
-        AbstractSourcePackage lePaquetSource = new AbstractSourcePackage();
-        AbstractSourceClass sourceClass = new AbstractSourceClass(); // Un peu faible et peu résilient, considère qu'il n'y a qu'une classe par .java
+        if (this.metricsData == null){throw new NoMetricsDataException();} // Un peu faible et peu résilient, considère qu'il n'y a qu'une classe par .java
 
+        MyVisitor visitor = new MyVisitor(this.metricsData, cu, callGraph);
         // Comptage des lignes encore ok
-        int lastCharacterPosition = this.cu.getStartPosition()+this.cu.getLength() -1;
+//        int lastCharacterPosition = this.cu.getStartPosition() + this.cu.getLength() - 1;
+//        int lastLine = this.cu.getLineNumber(lastCharacterPosition);
+//        sourceClass.setNumberOfLinesInClass(this.numberOfLine.addAndGet(lastLine));
+        this.cu.accept(visitor);
+
+        AbstractSourcePackage collectedPackage = visitor.getLePaquetSource();
+        AbstractSourceClass collectedClass = visitor.getSourceClass();
+
+        int lastCharacterPosition = this.cu.getStartPosition() + this.cu.getLength() - 1;
         int lastLine = this.cu.getLineNumber(lastCharacterPosition);
-        sourceClass.setNumberOfLinesInClass(this.numberOfLine.addAndGet(lastLine));
 
+        //collectedClass.setNumberOfLinesInClass(visitor.numberOfLine.addAndGet(lastLine));
+        //collectedClass.setNumberOfMethods(visitor.methodCounter.get());
+        collectedClass.setPackageParent(collectedPackage);
 
+        this.metricsData.addClass(collectedClass);
 
-        this.cu.accept(new ASTVisitor() {
-
-            private String currentMethodSignature = null;
-
-            public boolean visit(PackageDeclaration node){
-                lePaquetSource.setName(node.getName().toString());
-                //numberOfPackage.incrementAndGet();
-                return true;
-            }
-
-            @Override
-            public boolean visit(TypeDeclaration node) {
-                sourceClass.setNameOfClass(node.getName().toString());
-                compteurClass.incrementAndGet();
-                return true;
-            }
-
-            @Override
-            public boolean visit(FieldDeclaration node){
-                String nameOfAttributs = node.fragments().getFirst().toString();
-                sourceClass.addAttributs(new AbstractSourceAttributs(sourceClass,node.getType().toString(),nameOfAttributs));
-                return true;
-            }
-            @Override
-            public boolean visit(ClassInstanceCreation node) {
-                // On s'assure d'être dans le contexte d'une méthode de notre projet
-                if (currentMethodSignature != null) {
-                    // On récupère le "binding" du constructeur qui est appelé
-                    IMethodBinding constructorBinding = node.resolveConstructorBinding();
-                    if (constructorBinding != null) {
-                        // On utilise notre méthode createMethodSignature pour obtenir la signature du constructeur
-                        String calleeSignature = createMethodSignature(constructorBinding);
-
-                        // On ajoute une arête de la méthode courante vers le constructeur appelé
-                        callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.INSTANTIATION);
-                    }
-                }
-                return super.visit(node);
-            }
-
-            @Override
-            public boolean visit(MethodDeclaration node){
-                methodCounter.incrementAndGet();
-                //System.out.println(node.getName()+"\n"+node.parameters()+"\n"+node.getReturnType2());
-                List<String> listParameters = new ArrayList<>();
-                int numberOfLines = +cu.getLineNumber(node.getBody().getLength());
-                sourceClass.addMethod(new AbstractSourceMethods(sourceClass,node.isConstructor(),node.getName().toString(),node.parameters(),node.getReturnType2(),numberOfLines));
-                IMethodBinding binding = node.resolveBinding();
-                if (binding != null){
-                    this.currentMethodSignature = createMethodSignature(binding) ;
-                }
-                return true;
-            }
-            @Override
-            public void endVisit(MethodDeclaration node) {
-                this.currentMethodSignature = null;
-            }
-            @Override
-            public boolean visit(MethodInvocation node) {
-                if (currentMethodSignature != null){
-                    IMethodBinding calledMethodBinding = node.resolveMethodBinding();
-                    if (calledMethodBinding != null){
-                        String calleeSignature = createMethodSignature(calledMethodBinding);
-                        callGraph.addEdge(currentMethodSignature,calleeSignature, EdgeType.CALL);
-                    }
-                }
-
-                return true;
-            }
-            @Override
-            public boolean visit(ThrowStatement node) {
-                // On s'assure d'être dans le contexte d'une méthode de notre projet
-                if (currentMethodSignature != null) {
-                    // L'expression dans un throw est souvent un "new Exception(...)"
-                    // On vérifie donc si c'est une création d'instance
-                    if (node.getExpression() instanceof ClassInstanceCreation) {
-                        ClassInstanceCreation newException = (ClassInstanceCreation) node.getExpression();
-                        IMethodBinding constructorBinding = newException.resolveConstructorBinding();
-                        if (constructorBinding != null) {
-                            String calleeSignature = createMethodSignature(constructorBinding);
-                            callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.THROWS);
-                        }
-                    }
-                }
-                return super.visit(node);
-            }
-        });
-        this.updateData(sourceClass, lePaquetSource);
     }
 
     public CompilationUnit getCu() {
@@ -172,33 +96,34 @@ public class MetricsCollector {
         this.cu = cu;
     }
 
-    public AtomicInteger getCompteurClass() {
-        return compteurClass;
-    }
+//    public AtomicInteger getCompteurClass() {
+//        return compteurClass;
+//    }
+//
+//    public AtomicInteger getNumberOfLine() {
+//        return numberOfLine;
+//    }
 
-    public AtomicInteger getNumberOfLine() {
-        return numberOfLine;
-    }
 
+//    @Deprecated(since = "Priviligié la méthode dans le MyVisitor")
+//    public void updateData(AbstractSourceClass sourceClass, AbstractSourcePackage sourcePackage){
+//        //Seul chose ancienne tjrs logique
+//        this.metricsData.numberOfLines.addAndGet(this.numberOfLine.get());
+//
+//        //TODO Enlever cette logique
+//        //this.metricsData.numberOfClass.addAndGet(this.compteurClass.get());
+//        this.metricsData.numberOfMethods.addAndGet(this.methodCounter.get());
+//        sourceClass.setNumberOfMethods(this.methodCounter.get());
+//
+//        //Approche nouvelle
+//        sourceClass.setPackageParent(sourcePackage);
+//        this.metricsData.addClass(sourceClass);
+//
+//        /*this.lePaquetSource.addClassToPackage(this.cLaClasse);
+//        this.metricsData.addPackage(this.lePaquetSource); */
+//    }
 
-    public void updateData(AbstractSourceClass sourceClass, AbstractSourcePackage sourcePackage){
-        //Seul chose ancienne tjrs logique
-        this.metricsData.numberOfLines.addAndGet(this.numberOfLine.get());
-
-        //TODO Enlever cette logique
-        this.metricsData.numberOfClass.addAndGet(this.compteurClass.get());
-        this.metricsData.numberOfMethods.addAndGet(this.methodCounter.get());
-        sourceClass.setNumberOfMethods(this.methodCounter.get());
-
-        //Approche nouvelle
-        sourceClass.setPackageParent(sourcePackage);
-        this.metricsData.addClass(sourceClass);
-
-        /*this.lePaquetSource.addClassToPackage(this.cLaClasse);
-        this.metricsData.addPackage(this.lePaquetSource); */
-    }
-
-    private String createMethodSignature(IMethodBinding binding) {
+    public static String createMethodSignature(IMethodBinding binding) {
         if (binding == null) return "unknown.binding";
 
         StringBuilder signature = new StringBuilder();
