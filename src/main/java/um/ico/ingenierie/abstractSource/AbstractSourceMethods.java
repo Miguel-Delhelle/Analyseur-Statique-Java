@@ -5,6 +5,15 @@ import org.eclipse.jdt.core.dom.Type;
 import java.io.Serializable;
 import java.util.List;
 
+
+/**
+ * Cette classe, est un modèle de répresentation abstraite
+ * de la représentation d'une méthode trouvé dans le code source analysé.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
 public class AbstractSourceMethods implements Serializable {
 
     private AbstractSourceClass parentClass;

@@ -7,6 +7,8 @@ import java.nio.file.Path;
  * Exception levée dans le cas ou le Path indiqué
  * ne correspond pas à un répertoire Java.
  *
+ * L'exception peut être levée si l'utilisateur rentre un mauvais path.
+ *
  * @author Miguel Delhelle
  * @version 1.0
  */

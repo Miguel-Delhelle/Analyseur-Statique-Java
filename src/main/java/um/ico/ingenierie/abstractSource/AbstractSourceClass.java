@@ -4,6 +4,15 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+
+/**
+ * Cette classe, est un modèle de répresentation abstraite
+ * de la représentation d'une Class dans le code source analysé.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
 public class AbstractSourceClass implements Serializable {
 
     private String nameOfClass;

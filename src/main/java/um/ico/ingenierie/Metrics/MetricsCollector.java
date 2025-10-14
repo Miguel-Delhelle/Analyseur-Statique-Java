@@ -17,6 +17,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * La classe MetricsCollector est pensée pour être instancié dans le CodeAnalyzer
+ * Et détruite à la fin d'un fichier analysé par le CodeAnalyzer.
+ *
+ * Elle a pour principale fonctionnalité d'appeler CompilationUnit et les visiteurs
+ * Elle est le coeur de la collecte d'informations du code source rentrée.
+ *
+ * Elle prend en entrée une CompilationUnit (fourni par le code Analyzer) ainsi
+ * Que le MetricsData, le MetricsData correspond au Data sur un code Source.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ * */
+
 public class MetricsCollector {
 
     // Attributs légitime

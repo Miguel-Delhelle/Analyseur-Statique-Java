@@ -74,13 +74,6 @@ public class JavaFilesHandler {
 
         List<Path> toutLesCheminsJava = this.getAllPathJava();
         String toutLeCodeJava = "";
-//        try (Stream<Path> walker = Files.walk(this.chemin)){
-//
-//            toutLesCheminsJava =
-//                    walker.filter(Files::isRegularFile)
-//                    .filter(path -> path.toString().endsWith(".java"))
-//                    .collect(Collectors.toList());
-//        }
         if (toutLesCheminsJava.isEmpty()){throw new NoJavaPathExceptions(this.chemin);
         }
         for (Path unChemin : toutLesCheminsJava){

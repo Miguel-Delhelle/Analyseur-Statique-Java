@@ -14,6 +14,16 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+/**
+ * Le CodeAnalyzer a pour but de parcourir une arborescence de fichiers donnée par le JavaFilesHandler
+ * et d'exécuter une Analyze, elle prend en entrée un path, si il n'est pas renseigné il execute sur lui même.
+ *
+ * Il contient un callGraph permettant d'avoir le graphe d'appel.
+ * Ainsi qu'un metricsData correspondant
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ * */
 
 public class CodeAnalyzer {
 

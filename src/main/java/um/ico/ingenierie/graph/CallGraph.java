@@ -2,6 +2,14 @@ package um.ico.ingenierie.graph;
 
 import java.util.*;
 
+/**
+ * La classe CallGraph permet de créer un .dot représentant le graphe d'appel
+ *
+ * @author Miguel Delhelle
+ * @version ALPHA_BEFORE_SPRING
+ */
+
+@Deprecated(since = "CallGraph utilise l'ancienne logique d'avant la logique Spring -- Appli Web")
 public class CallGraph {
 
     // Caller Method Signature -> Set of Callee Method Signatures

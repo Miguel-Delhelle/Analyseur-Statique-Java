@@ -11,12 +11,22 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * La classe MetricsData a pour but de juste stocker les données d'un unique code Source.
+ * Il y a un MetricsData par code Source.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ * */
+
 public class MetricsData {
 
     public AtomicInteger numberOfClass = new AtomicInteger(0);
     public AtomicInteger numberOfMethods = new AtomicInteger(0);
     public AtomicInteger numberOfLines = new AtomicInteger(0);
+
     //public double averageNumberOfMethodsInClass = 0.0;
+
     //public double averageNumberOfLinesInMethods = 0.0;
     private List<AbstractSourcePackage> abstractSourcePackageList = new ArrayList<AbstractSourcePackage>();
     private List<AbstractSourceClass> abstractSourceClassList = new ArrayList<AbstractSourceClass>();

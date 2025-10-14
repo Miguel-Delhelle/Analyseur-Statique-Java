@@ -4,6 +4,15 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Cette classe, est un modèle de répresentation abstraite
+ * de la représentation d'un package trouvé dans le code source analysé.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+
 public class AbstractSourcePackage implements Serializable {
 
     private String name;

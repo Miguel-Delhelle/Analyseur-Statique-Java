@@ -1,5 +1,14 @@
 package um.ico.ingenierie.graph;
 
+/**
+ *
+ * Cette classe représente les liens entre les différents noeuds
+ *
+ * @author Miguel Delhelle
+ * @version ALPHA_BEFORE_SPRING
+ */
+
+
 public class Edge {
     public final String calleeSignature;
     public final EdgeType type;
