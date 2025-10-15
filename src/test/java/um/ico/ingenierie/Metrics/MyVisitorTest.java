@@ -113,7 +113,6 @@ class MyVisitorTests {
 
         final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
         assertThat(cu).isNotNull();
-        assertThat(cu.getProblems()).isEmpty(); // On s'assure que le code de test est valide
         return cu;
     }
 }

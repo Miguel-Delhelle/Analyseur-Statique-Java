@@ -3,6 +3,7 @@ package um.ico.ingenierie.traitementFile;
 import um.ico.ingenierie.Exceptions.NoJavaPathExceptions;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,17 +44,23 @@ public class JavaFilesHandler {
     }
 
     private List<Path> allPathJava() throws IOException {
-
-        List<Path> toutLesCheminsJava;
-        String toutLeCodeJava = "";
+        List<Path> toutLesCheminsJava = new ArrayList<Path>();
+        String separator = FileSystems.getDefault().getSeparator();
+        String srcMainPathFragment = "src" + separator + "main";
         try (Stream<Path> walker = Files.walk(this.chemin)) {
-
-            toutLesCheminsJava =
-                    walker.filter(Files::isRegularFile)
-                            .filter(path -> path.toString().endsWith(".java"))
-                            .collect(Collectors.toList());
+            toutLesCheminsJava = walker
+                    .filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String pathAsString = path.toString();
+                        return pathAsString.endsWith(".java") &&
+                                pathAsString.contains(srcMainPathFragment);
+                    })
+                    .collect(Collectors.toList());
         }
-        if (toutLesCheminsJava.isEmpty()){throw new NoJavaPathExceptions(this.chemin);}
+        if (toutLesCheminsJava.isEmpty()) {
+            throw new NoJavaPathExceptions(this.chemin);
+        }
+
         return toutLesCheminsJava;
     }
 

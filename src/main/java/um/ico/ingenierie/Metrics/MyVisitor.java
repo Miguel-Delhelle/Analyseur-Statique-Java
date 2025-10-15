@@ -47,7 +47,7 @@ public class MyVisitor extends ASTVisitor {
 
         int startLine = cu.getLineNumber(startPosition);
         int endLine = cu.getLineNumber(endPosition);
-        int lineCount = endLine - startLine + 1;
+        int lineCount = endLine - startLine;
 
         sourceClass.setNumberOfLinesInClass(lineCount);
 
@@ -81,14 +81,19 @@ public class MyVisitor extends ASTVisitor {
     public boolean visit(MethodDeclaration node){
        //methodCounter.incrementAndGet();
         //System.out.println(node.getName()+"\n"+node.parameters()+"\n"+node.getReturnType2());
-
-        List<String> listParameters = new ArrayList<>();
-        int numberOfLines =+ cu.getLineNumber(node.getBody().getLength());
-        sourceClass.addMethod(new AbstractSourceMethods(sourceClass,node.isConstructor(),node.getName().toString(),node.parameters(),node.getReturnType2(),numberOfLines));
-        IMethodBinding binding = node.resolveBinding();
-        if (binding != null){
-            this.currentMethodSignature = createMethodSignature(binding) ;
+        try {
+            List<String> listParameters = new ArrayList<>();
+            int numberOfLines = 0;
+            numberOfLines = numberOfLines + cu.getLineNumber(node.getBody().getLength());
+            sourceClass.addMethod(new AbstractSourceMethods(sourceClass,node.isConstructor(),node.getName().toString(),node.parameters(),node.getReturnType2(),numberOfLines));
+            IMethodBinding binding = node.resolveBinding();
+            if (binding != null){
+                this.currentMethodSignature = createMethodSignature(binding) ;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
         return true;
     }
     @Override
@@ -125,11 +130,11 @@ public class MyVisitor extends ASTVisitor {
         return super.visit(node);
     }
 
-    @Override
-    public void postVisit(ASTNode node) {
-        this.updateData(this.sourceClass,this.lePaquetSource);
-        super.postVisit(node);
-    }
+//    @Override
+//    public void postVisit(ASTNode node) {
+//        //this.updateData(this.sourceClass,this.lePaquetSource);
+//        super.postVisit(node);
+//    }
 
     @Deprecated(since = "N'as plus aucun sens ici")
     public void updateData(AbstractSourceClass sourceClass, AbstractSourcePackage sourcePackage){

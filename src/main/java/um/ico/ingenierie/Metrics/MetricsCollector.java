@@ -77,8 +77,8 @@ public class MetricsCollector {
         AbstractSourcePackage collectedPackage = visitor.getLePaquetSource();
         AbstractSourceClass collectedClass = visitor.getSourceClass();
 
-        int lastCharacterPosition = this.cu.getStartPosition() + this.cu.getLength() - 1;
-        int lastLine = this.cu.getLineNumber(lastCharacterPosition);
+//        int lastCharacterPosition = this.cu.getStartPosition() + this.cu.getLength() - 1;
+//        int lastLine = this.cu.getLineNumber(lastCharacterPosition);
 
         //collectedClass.setNumberOfLinesInClass(visitor.numberOfLine.addAndGet(lastLine));
         //collectedClass.setNumberOfMethods(visitor.methodCounter.get());
