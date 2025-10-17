@@ -3,9 +3,8 @@ package um.ico.ingenierie;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import um.ico.ingenierie.Core.CodeAnalyzer;
+import um.ico.ingenierie.Analysis.core.CodeAnalyzer;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
-import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerGit;
 import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerPath;
 
 import java.io.IOException;
@@ -24,7 +23,7 @@ public class AstIngenierieApplication {
 
 	public static void main(String[] args) throws IOException, GitAPIException {
 		SpringApplication.run(AstIngenierieApplication.class, args);
-        IJavaFilesHandler javaFilesHandler = new JavaFilesHandlerPath("/home/miguel/Projet/jakarta");
+        /*IJavaFilesHandler javaFilesHandler = new JavaFilesHandlerPath(".");
         CodeAnalyzer codeAnalyzer = new CodeAnalyzer(javaFilesHandler);
 
         String dotRepresentation = codeAnalyzer.getCallGraph().toDotString(codeAnalyzer.getMetricsData().determineBasePackage());
@@ -34,7 +33,7 @@ public class AstIngenierieApplication {
 
         String toutleCode = javaFilesHandler.javaToString();
 
-        Files.writeString(Paths.get("ToutLeCode.txt"), toutleCode);
+        Files.writeString(Paths.get("ToutLeCode.txt"), toutleCode); */
 
     }
 

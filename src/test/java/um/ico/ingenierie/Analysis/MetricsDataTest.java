@@ -1,12 +1,13 @@
-package um.ico.ingenierie.Core;
+package um.ico.ingenierie.Analysis;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import um.ico.ingenierie.Models.AbstractSourceAttributs;
-import um.ico.ingenierie.Models.AbstractSourceClass;
-import um.ico.ingenierie.Models.AbstractSourceMethods;
-import um.ico.ingenierie.Models.AbstractSourcePackage;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceAttributs;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceMethods;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourcePackage;
 
 import java.util.Collections;
 

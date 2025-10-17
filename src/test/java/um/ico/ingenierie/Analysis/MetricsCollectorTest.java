@@ -1,6 +1,6 @@
 // Fichier : src/test/java/um/ico/ingenierie/Metrics/MetricsCollectorTests.java
 
-package um.ico.ingenierie.Core;
+package um.ico.ingenierie.Analysis;
 
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -8,9 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import um.ico.ingenierie.Models.AbstractSourceClass;
-import um.ico.ingenierie.Models.AbstractSourcePackage;
-import um.ico.ingenierie.graph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.core.MetricsCollector;
+import um.ico.ingenierie.Analysis.core.MyVisitor;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourcePackage;
+import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
 
 import static org.mockito.Mockito.*;
 

@@ -5,6 +5,9 @@ package um.ico.ingenierie.graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.graph.Edge;
+import um.ico.ingenierie.Analysis.Models.graph.EdgeType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

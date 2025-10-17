@@ -1,4 +1,4 @@
-package um.ico.ingenierie.Models;
+package um.ico.ingenierie.Analysis.Models.SourceCode;
 
 import org.eclipse.jdt.core.dom.Type;
 

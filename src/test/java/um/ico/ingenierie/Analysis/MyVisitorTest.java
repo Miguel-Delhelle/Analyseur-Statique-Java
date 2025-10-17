@@ -1,13 +1,15 @@
-package um.ico.ingenierie.Core;
+package um.ico.ingenierie.Analysis;
 
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import um.ico.ingenierie.graph.CallGraph;
-import um.ico.ingenierie.graph.Edge;
-import um.ico.ingenierie.graph.EdgeType;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.core.MyVisitor;
+import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.graph.Edge;
+import um.ico.ingenierie.Analysis.Models.graph.EdgeType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

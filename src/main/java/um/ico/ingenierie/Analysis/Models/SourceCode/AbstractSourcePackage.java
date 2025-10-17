@@ -1,4 +1,4 @@
-package um.ico.ingenierie.Models;
+package um.ico.ingenierie.Analysis.Models.SourceCode;
 
 import java.io.Serializable;
 import java.util.ArrayList;

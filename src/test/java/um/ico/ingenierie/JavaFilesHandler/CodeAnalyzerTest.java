@@ -5,9 +5,9 @@ package um.ico.ingenierie.JavaFilesHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import um.ico.ingenierie.Core.CodeAnalyzer;
-import um.ico.ingenierie.Core.MetricsData;
-import um.ico.ingenierie.graph.CallGraph;
+import um.ico.ingenierie.Analysis.core.CodeAnalyzer;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
 
 import java.io.IOException;
 import java.nio.file.Files;

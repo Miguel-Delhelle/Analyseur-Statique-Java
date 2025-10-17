@@ -1,8 +1,8 @@
-package um.ico.ingenierie.Core;
+package um.ico.ingenierie.Analysis.Models;
 
-import um.ico.ingenierie.Models.AbstractSourceClass;
-import um.ico.ingenierie.Models.AbstractSourceMethods;
-import um.ico.ingenierie.Models.AbstractSourcePackage;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceMethods;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourcePackage;
 import um.ico.ingenierie.Common.results.SearchResult;
 
 import java.util.ArrayList;
@@ -21,30 +21,12 @@ import java.util.stream.Collectors;
 
 public class MetricsData {
 
-
-
-    //public AtomicInteger numberOfClass = new AtomicInteger(0);
-    //public AtomicInteger numberOfMethods = new AtomicInteger(0);
-    //public AtomicInteger numberOfLines = new AtomicInteger(0);
-
-    //public double averageNumberOfMethodsInClass = 0.0;
-
-    //public double averageNumberOfLinesInMethods = 0.0;
-
-    private List<AbstractSourcePackage> abstractSourcePackageList = new ArrayList<AbstractSourcePackage>();
+    List<AbstractSourcePackage> abstractSourcePackageList = new ArrayList<AbstractSourcePackage>();
     private List<AbstractSourceClass> abstractSourceClassList = new ArrayList<AbstractSourceClass>();
-
 
     public MetricsData() {
     }
 
-    /*public String allClassString() {
-        String str = "";
-        for (AbstractSourceClass laClasse : this.abstractSourceClassList) {
-            str += laClasse.toString();
-        }
-        return str;
-    } */
 
     public int getNumberOfPackage() {
         return this.getAbstractPackageSourceList().size();
@@ -66,22 +48,6 @@ public class MetricsData {
                 .sum();
     }
 
-//    public AtomicInteger getNumberOfMethods() {
-//        return numberOfMethods;
-//    }
-
-//    //public void setNumberOfMethods(AtomicInteger numberOfMethods) {
-//        this.numberOfMethods = numberOfMethods;
-//    }
-
-//    public AtomicInteger getNumberOfLines() {
-//        return numberOfLines;
-//    }
-
-//    public void setNumberOfLines(AtomicInteger numberOfLines) {
-//        this.numberOfLines = numberOfLines;
-//    }
-
     public List<AbstractSourcePackage> getAbstractPackageSourceList() {
         return abstractSourcePackageList;
     }
@@ -97,6 +63,7 @@ public class MetricsData {
     public void setAbstractSourceClassList(List<AbstractSourceClass> abstractSourceClassList) {
         this.abstractSourceClassList = abstractSourceClassList;
     }
+
 
     // Méthodes
 
@@ -247,7 +214,7 @@ public class MetricsData {
     /**
      * Détermine le package de base du projet analysé en trouvant
      * le plus long préfixe commun à tous les noms de packages.
-     * @return Le nom du package de base (ex: "um.ico.ingenierie") ou une chaîne vide.
+     * @return Le nom du package de base (ex: "com.example.superAppli") ou une chaîne vide.
      */
     public String determineBasePackage() {
         List<String> packageNames = this.getAbstractPackageSourceList().stream()
@@ -258,7 +225,7 @@ public class MetricsData {
             return "";
         }
 
-        String longestCommonPrefix = packageNames.get(0);
+        String longestCommonPrefix = packageNames.getFirst();
         for (int i = 1; i < packageNames.size(); i++) {
             String currentPackage = packageNames.get(i);
             while (currentPackage.indexOf(longestCommonPrefix) != 0) {
@@ -268,13 +235,9 @@ public class MetricsData {
                 }
             }
         }
-
-        // On s'assure de ne pas couper un nom de package au milieu (ex: um.ico.ing)
-        // On retourne le préfixe jusqu'au dernier point.
         if (longestCommonPrefix.endsWith(".")) {
             longestCommonPrefix = longestCommonPrefix.substring(0, longestCommonPrefix.length() - 1);
         }
-
         return longestCommonPrefix;
     }
 

@@ -1,14 +1,15 @@
-package um.ico.ingenierie.Core;
+package um.ico.ingenierie.Analysis.core;
 
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
 import um.ico.ingenierie.Common.Exceptions.NoCompilationUnitExceptions;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
 import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerPath;
-import um.ico.ingenierie.graph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
 
 import java.io.File;
 import java.io.IOException;

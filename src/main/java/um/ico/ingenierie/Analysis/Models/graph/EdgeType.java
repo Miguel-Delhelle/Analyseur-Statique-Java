@@ -1,4 +1,4 @@
-package um.ico.ingenierie.graph;
+package um.ico.ingenierie.Analysis.Models.graph;
 
 /**
  * Cette enumeration représente le type de lien qu'on affiche.

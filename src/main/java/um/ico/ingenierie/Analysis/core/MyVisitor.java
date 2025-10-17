@@ -1,17 +1,18 @@
-package um.ico.ingenierie.Core;
+package um.ico.ingenierie.Analysis.core;
 
 import org.eclipse.jdt.core.dom.*;
-import um.ico.ingenierie.Models.AbstractSourceAttributs;
-import um.ico.ingenierie.Models.AbstractSourceClass;
-import um.ico.ingenierie.Models.AbstractSourceMethods;
-import um.ico.ingenierie.Models.AbstractSourcePackage;
-import um.ico.ingenierie.graph.CallGraph;
-import um.ico.ingenierie.graph.EdgeType;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceAttributs;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceMethods;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourcePackage;
+import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.graph.EdgeType;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static um.ico.ingenierie.Core.MetricsCollector.createMethodSignature;
+import static um.ico.ingenierie.Analysis.core.MetricsCollector.createMethodSignature;
 
 public class MyVisitor extends ASTVisitor {
 
