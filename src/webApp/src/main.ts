@@ -26,6 +26,8 @@ const resultsContent = document.getElementById('results-content') as HTMLElement
 
 const metricsTableBody = document.getElementById('metricsTableBody') as HTMLElement;
 const graphContainer = document.getElementById('graphContainer') as HTMLElement;
+const downloadBtn = document.getElementById('downloadBtn') as HTMLAnchorElement;
+
 
 
 // --- GESTIONNAIRES D'ÉVÉNEMENTS ---
@@ -131,9 +133,36 @@ function displayMetrics(metrics: metricsDto) {
  */
 async function displayGraph(graphDot: graphDotDTO) {
     graphContainer.innerHTML = '<p>Génération du graphe...</p>';
+    downloadBtn.classList.add('hidden'); // Cache le bouton au début
+
+    if (!graphDot || !graphDot.dotContent) {
+        // ... (gestion d'erreur)
+        return;
+    }
+
     try {
-        const svg = await graphviz.layout(graphDot.dotContent, "svg", "dot");
-        graphContainer.innerHTML = svg;
+        const graphviz = await Graphviz.load();
+        const svgString = graphviz.layout(graphDot.dotContent, "svg", "dot");
+        
+        // Affiche le graphe
+        graphContainer.innerHTML = svgString;
+
+
+        // 1. Crée un objet "Blob" à partir de la chaîne SVG.
+        // Un Blob représente des données brutes (comme un fichier).
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+
+        // 2. Crée une URL temporaire qui pointe vers ce Blob en mémoire.
+        const url = URL.createObjectURL(blob);
+
+        // 3. Configure le bouton de téléchargement.
+        downloadBtn.href = url;
+        // On peut même donner un nom de fichier dynamique
+        downloadBtn.download = `call-graph-${new Date().toISOString()}.svg`;
+        
+        // 4. Affiche le bouton.
+        downloadBtn.classList.remove('hidden');
+
     } catch (error) {
         console.error("Erreur lors de la génération du graphe DOT:", error);
         graphContainer.innerHTML = '<p style="color: red;">Erreur lors de la génération du graphe.</p>';

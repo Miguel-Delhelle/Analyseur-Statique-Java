@@ -115,3 +115,20 @@ button:hover {
 .hidden {
     display: none;
 }
+
+#downloadBtn {
+    display: inline-block; /* Pour que le style s'applique */
+    margin-top: 1em;
+    text-decoration: none; /* Enlève le soulignement du lien */
+    cursor: pointer;
+    padding: 0.5em 1em;
+    border: 1px solid #28a745;
+    background-color: #28a745;
+    color: white;
+    border-radius: 4px;
+    text-align: center;
+}
+
+#downloadBtn:hover {
+    background-color: #218838;
+}

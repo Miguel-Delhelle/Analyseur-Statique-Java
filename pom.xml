@@ -8,6 +8,7 @@
 		<version>3.5.6</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
+
 	<groupId>um.ico</groupId>
 	<artifactId>ingenierie</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
@@ -28,6 +29,7 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+        <frontend-maven-plugin.version>1.15.0</frontend-maven-plugin.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -70,8 +72,70 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>${frontend-maven-plugin.version}</version>
+
+                <configuration>
+                    <!-- CORRECTION 1: On met le nom du dossier en dur -->
+                    <workingDirectory>webApp</workingDirectory>
+
+                    <!-- Recommandation : Utiliser une version LTS (Long Term Support) de Node est plus stable -->
+                    <nodeVersion>v20.11.1</nodeVersion>
+                    <npmVersion>10.2.4</npmVersion>
+
+                    <!-- On enlève installDirectory pour que Node soit installé DANS webApp, c'est plus propre -->
+                </configuration>
+
+                <executions>
+                    <!-- Exécution 1: Installe Node et NPM -->
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <goals>
+                            <!-- CORRECTION 2: On installe NPM, pas YARN -->
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <!-- On utilise la même phase pour toutes les étapes de préparation -->
+                        <phase>generate-resources</phase>
+                    </execution>
+
+                    <!-- Exécution 2: Lance "npm install" -->
+                    <execution>
+                        <id>npm-install</id>
+                        <goals>
+                            <!-- CORRECTION 3: On utilise le goal "npm", pas "yarn" -->
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install</arguments>
+                        </configuration>
+                        <phase>generate-resources</phase>
+                    </execution>
+
+                    <!-- Exécution 3: Lance "npm run build" -->
+                    <execution>
+                        <id>npm-build</id>
+                        <goals>
+                            <!-- CORRECTION 4: On utilise le goal "npm", pas "yarn" -->
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                        <!-- On exécute le build dans la même phase que le reste -->
+                        <phase>generate-resources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+        </plugins>
+
+
+
 	</build>
 
 </project>

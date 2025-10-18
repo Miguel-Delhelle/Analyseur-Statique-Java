@@ -23,7 +23,7 @@ public class AstIngenierieApplication {
 
 	public static void main(String[] args) throws IOException, GitAPIException {
 		SpringApplication.run(AstIngenierieApplication.class, args);
-        /*IJavaFilesHandler javaFilesHandler = new JavaFilesHandlerPath(".");
+        IJavaFilesHandler javaFilesHandler = new JavaFilesHandlerPath("/home/miguel/Projet/X3RSI");
         CodeAnalyzer codeAnalyzer = new CodeAnalyzer(javaFilesHandler);
 
         String dotRepresentation = codeAnalyzer.getCallGraph().toDotString(codeAnalyzer.getMetricsData().determineBasePackage());
@@ -33,7 +33,7 @@ public class AstIngenierieApplication {
 
         String toutleCode = javaFilesHandler.javaToString();
 
-        Files.writeString(Paths.get("ToutLeCode.txt"), toutleCode); */
+        Files.writeString(Paths.get("ToutLeCode.txt"), toutleCode);
 
     }
 
