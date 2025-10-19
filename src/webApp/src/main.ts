@@ -12,6 +12,7 @@ interface AnalysisResponse {
     graphDotDTO: graphDotDTO;
 }
 
+//@ts-ignore
 const graphviz = await Graphviz.load();
 
 // Références aux éléments du DOM

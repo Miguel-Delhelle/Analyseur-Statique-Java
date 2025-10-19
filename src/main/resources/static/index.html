@@ -1,14 +1,62 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>webapp</title>
-    <script type="module" crossorigin src="/assets/index-CW01TaJj.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BaiKPFAq.css">
-  </head>
-  <body>
-    <div id="app"></div>
-  </body>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <!-- Auteur Delhelle Miguel -->
+    <meta charset="UTF-8">
+    <title>Analyseur de Code Java</title>
+  <script type="module" crossorigin src="/assets/index-cfEWVa8f.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-C2v9VaPU.css">
+</head>
+<body>
+
+    <header>
+        <h1>Analyseur de Code Statique</h1>
+    </header>
+
+    <main>
+        <section id="controls">
+            <!-- Option 1: Analyse par URL Git -->
+            <div class="analysis-option">
+                <h2>Analyser un dépôt Git</h2>
+                <input type="text" id="gitUrlInput" placeholder="https://github.com/user/repo.git" size="50">
+                <button id="analyzeGitBtn">Lancer l'Analyse Git</button>
+            </div>
+
+            <!-- Option 2: Analyse par Upload de ZIP -->
+            <div class="analysis-option">
+                <h2>Analyser un projet .zip</h2>
+                <input type="file" id="zipFileInput" accept=".zip">
+                <button id="analyzeZipBtn">Lancer l'Analyse ZIP</button>
+            </div>
+        </section>
+
+        <!-- Zone d'affichage des résultats, cachée par défaut -->
+        <section id="results" class="hidden">
+            <div id="loader" class="hidden">
+                <p>Analyse en cours, veuillez patienter...</p>
+            </div>
+
+            <div id="results-content" class="hidden">
+                <h2>Résultats de l'Analyse</h2>
+                
+                <h3>Métriques</h3>
+                <table id="metricsTable">
+                    <tbody id="metricsTableBody">
+                        <!-- Le contenu sera généré par JavaScript -->
+                    </tbody>
+                </table>
+
+                <h3>Graphe d'Appel (DOT)</h3>
+                <div id="graphContainer">
+                    <!-- Le graphe SVG sera injecté ici par JavaScript -->
+                </div>
+            </div>
+
+            <!-- AJOUTE CETTE LIGNE -->
+            <a id="downloadBtn" class="hidden" href="#" download="call-graph.svg">Télécharger le graphe (SVG)</a>
+        </section>
+    </main>
+
+    <!-- On lie notre script principal. 'type="module"' est crucial pour Vite. -->
+</body>
 </html>

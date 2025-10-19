@@ -81,7 +81,7 @@
 
                 <configuration>
                     <!-- CORRECTION 1: On met le nom du dossier en dur -->
-                    <workingDirectory>webApp</workingDirectory>
+                    <workingDirectory>src/webApp</workingDirectory>
 
                     <!-- Recommandation : Utiliser une version LTS (Long Term Support) de Node est plus stable -->
                     <nodeVersion>v20.11.1</nodeVersion>

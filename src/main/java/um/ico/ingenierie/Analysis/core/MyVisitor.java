@@ -40,6 +40,7 @@ public class MyVisitor extends ASTVisitor {
     @Override
     public boolean visit(TypeDeclaration node) {
         sourceClass.setNameOfClass(node.getName().toString());
+        sourceClass.setPackageParent(lePaquetSource);
 
         int startPosition = node.getStartPosition();
 
