@@ -12,7 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 /**
- * Le Main, le poitn d'entrée c'est tout.
+ * Le Main, le point d'entrée c'est tout.
  *
  * @author Miguel Delhelle
  * @version 1.0
@@ -23,18 +23,6 @@ public class AstIngenierieApplication {
 
 	public static void main(String[] args) throws IOException, GitAPIException {
 		SpringApplication.run(AstIngenierieApplication.class, args);
-        /*IJavaFilesHandler javaFilesHandler = new JavaFilesHandlerPath("/home/miguel/Projet/X3RSI");
-        CodeAnalyzer codeAnalyzer = new CodeAnalyzer(javaFilesHandler);
-
-        String dotRepresentation = codeAnalyzer.getCallGraph().toDotString(codeAnalyzer.getMetricsData().determineBasePackage());
-
-        // 2. Écrire ce contenu dans un fichier "graph.dot"
-        Files.writeString(Paths.get("graph.dot"), dotRepresentation);
-
-        String toutleCode = javaFilesHandler.javaToString();
-
-        Files.writeString(Paths.get("ToutLeCode.txt"), toutleCode); */
-
     }
 
 }
