@@ -36,3 +36,6 @@ build/
 
 # Fichiers de log et temporaires
 *.log
+
+graph.dot
+graph.png
