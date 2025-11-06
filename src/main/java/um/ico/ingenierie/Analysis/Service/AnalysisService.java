@@ -16,6 +16,7 @@ public class AnalysisService {
 
    public CodeAnalyzer analyzeProject(IJavaFilesHandler javaFilesHandler) throws IOException{
         log.info("Le service d'analyse est appelé pour", javaFilesHandler);
+        System.out.println(javaFilesHandler.javaToString());
         CodeAnalyzer result = new CodeAnalyzer(javaFilesHandler);
         return result;
     }

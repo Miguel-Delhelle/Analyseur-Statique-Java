@@ -225,7 +225,7 @@ public class MetricsData {
             return "";
         }
 
-        String longestCommonPrefix = packageNames.getFirst();
+        String longestCommonPrefix = packageNames.get(0);
         for (int i = 1; i < packageNames.size(); i++) {
             String currentPackage = packageNames.get(i);
             while (currentPackage.indexOf(longestCommonPrefix) != 0) {

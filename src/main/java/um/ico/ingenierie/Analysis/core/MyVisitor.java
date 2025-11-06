@@ -57,7 +57,7 @@ public class MyVisitor extends ASTVisitor {
 
     @Override
     public boolean visit(FieldDeclaration node){
-        String nameOfAttributs = node.fragments().getFirst().toString();
+        String nameOfAttributs = node.fragments().get(0).toString();
         sourceClass.addAttributs(new AbstractSourceAttributs(sourceClass,node.getType().toString(),nameOfAttributs));
         return true;
     }

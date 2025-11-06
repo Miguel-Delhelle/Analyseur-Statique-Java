@@ -50,7 +50,7 @@ class MyVisitorTests {
 
         // Assert
         assertThat(metricsData.getNumberOfClass()).isEqualTo(1);
-        var collectedClass = metricsData.getAbstractSourceClassList().getFirst();
+        var collectedClass = metricsData.getAbstractSourceClassList().get(0);
 
         assertThat(collectedClass.getNameOfClass()).isEqualTo("MaClasse");
         assertThat(collectedClass.getPackageParent().getName()).isEqualTo("com.monprojet");

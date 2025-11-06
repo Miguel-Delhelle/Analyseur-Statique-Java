@@ -11,9 +11,15 @@ public record GraphDotDTO(String dotContent) {
      * @param metricsData L'objet MetricsData (nécessaire pour déterminer le package de base).
      * @return Une nouvelle instance de GraphDotDto.
      */
-    public static GraphDotDTO from(CallGraph callGraph, MetricsData metricsData) {
+    public static GraphDotDTO from(CallGraph callGraph, MetricsData metricsData, boolean withExternal) {
         String basePackage = metricsData.determineBasePackage();
-        String dotString = callGraph.toDotString(basePackage);
+        String dotString;
+        if (withExternal){
+            dotString = callGraph.toDotString();
+        }else{
+            dotString = callGraph.toDotString(basePackage);
+        }
         return new GraphDotDTO(dotString);
+        //TODO PENSER A RENDRE LA VERSION FILTRE ET SANS FILTRE POSSIBLE (Voir que le programme lui même, et les dépendances, je java etc)
     }
 }

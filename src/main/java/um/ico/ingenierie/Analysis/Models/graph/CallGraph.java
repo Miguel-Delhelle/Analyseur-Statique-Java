@@ -20,6 +20,93 @@ public class CallGraph {
         adjacencyList.get(callerSignature).add(new Edge(calleeSignature, type));
     }
 
+    /**
+     * Génère une représentation COMPLÈTE du graphe au format DOT, sans aucun filtre.
+     * @return Une chaîne de caractères prête à être écrite dans un fichier .dot.
+     */
+    public String toDotString() {
+        StringBuilder dot = new StringBuilder("digraph CallGraph {\n");
+        dot.append("  rankdir=LR;\n");
+        dot.append("  splines=ortho;\n");
+        dot.append("  dpi=150;\n");
+        dot.append("  size=\"20,20\";\n");
+        dot.append("  ratio=auto;\n");
+        dot.append("  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n");
+        dot.append("  edge [fontname=\"Helvetica\", fontsize=9];\n");
+        dot.append("  graph [fontsize=12, fontcolor=\"blue\"];\n\n"); // Label du graphe enlevé
+
+        // ÉTAPE 1: Regrouper toutes les méthodes par nom de classe
+        Map<String, List<String>> classToMethodsMap = new HashMap<>();
+        for (String signature : adjacencyList.keySet()) {
+            // Pas de filtre, on prend toutes les signatures
+            String className = signature.split("#")[0];
+            classToMethodsMap.computeIfAbsent(className, k -> new ArrayList<>()).add(signature);
+        }
+
+        // ÉTAPE 2: Créer une map de signatures vers des IDs de nœuds uniques (n0, n1...)
+        Map<String, String> signatureToNodeId = new HashMap<>();
+        int nodeCounter = 0;
+
+        // ÉTAPE 3: Écrire les clusters pour chaque classe
+        int clusterCounter = 0;
+        for (Map.Entry<String, List<String>> entry : classToMethodsMap.entrySet()) {
+            String className = entry.getKey();
+            List<String> methods = entry.getValue();
+            String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
+
+            dot.append(String.format("  subgraph cluster_%d {\n", clusterCounter++));
+            dot.append(String.format("    label = \"%s\";\n", simpleClassName));
+            dot.append("    style = \"filled\";\n");
+            dot.append("    color = \"lightgrey\";\n\n");
+
+            for (String methodSignature : methods) {
+                String nodeId = "n" + nodeCounter++;
+                signatureToNodeId.put(methodSignature, nodeId);
+
+                String methodLabel = "N/A";
+                String[] parts = simplifySignature(methodSignature).split("#");
+                if (parts.length > 1) {
+                    methodLabel = parts[1];
+                }
+
+                dot.append(String.format("    %s [label=\"%s\"];\n", nodeId, methodLabel));
+            }
+            dot.append("  }\n\n");
+        }
+
+        // ÉTAPE 4: Écrire toutes les arêtes (les flèches)
+        for (Map.Entry<String, Set<Edge>> edgeEntry : adjacencyList.entrySet()) {
+            String callerSignature = edgeEntry.getKey();
+            String callerId = signatureToNodeId.get(callerSignature);
+
+            // Si le nœud appelant n'existe pas (ce qui ne devrait pas arriver), on saute
+            if (callerId == null) continue;
+
+            for (Edge edge : edgeEntry.getValue()) {
+                String calleeSignature = edge.calleeSignature;
+                String calleeId = signatureToNodeId.get(calleeSignature);
+
+                // On dessine l'arête seulement si l'appelé est aussi un nœud connu
+                if (calleeId != null) {
+                    String color = "black"; // Par défaut
+                    switch (edge.type) {
+                        case INSTANTIATION: color = "darkgreen"; break;
+                        case THROWS: color = "red"; break;
+                    }
+                    dot.append(String.format("  %s -> %s [color=\"%s\"];\n", callerId, calleeId, color));
+                }
+            }
+        }
+
+        // La légende ne change pas
+        dot.append("\n  subgraph cluster_legend {\n");
+        // ... (colle ici ta légende existante) ...
+        dot.append("  }\n");
+
+        dot.append("}\n");
+        return dot.toString();
+    }
+
 
 
 
@@ -40,10 +127,9 @@ public class CallGraph {
         dot.append("  edge [fontname=\"Helvetica\", fontsize=9];\n");
         dot.append("  graph [label=\"" + basePackageFilter + "\", fontsize=12, fontcolor=\"blue\"];\n\n");
 
-        // ÉTAPE 1: Regrouper les méthodes par nom de classe
         Map<String, List<String>> classToMethodsMap = new HashMap<>();
         for (String signature : adjacencyList.keySet()) {
-            if (signature.startsWith(basePackageFilter)) {
+            if (signature.startsWith(basePackageFilter) | basePackageFilter.isEmpty()) {
                 String className = signature.split("#")[0];
                 classToMethodsMap.computeIfAbsent(className, k -> new ArrayList<>()).add(signature);
             }
@@ -80,13 +166,13 @@ public class CallGraph {
         for (Map.Entry<String, Set<Edge>> edgeEntry : adjacencyList.entrySet()) {
             String callerSignature = edgeEntry.getKey();
 
-            if (callerSignature.startsWith(basePackageFilter)) {
+            if (callerSignature.startsWith(basePackageFilter) | basePackageFilter.isEmpty()) {
                 String callerId = signatureToNodeId.get(callerSignature);
                 if (callerId == null) continue;
 
                 for (Edge edge : edgeEntry.getValue()) {
                     String calleeSignature = edge.calleeSignature;
-                    if (calleeSignature.startsWith(basePackageFilter)) {
+                    if (calleeSignature.startsWith(basePackageFilter) | basePackageFilter.isEmpty()) {
                         String calleeId = signatureToNodeId.get(calleeSignature);
                         if (calleeId != null) {
                             // LA NOUVELLE LOGIQUE DE COULEUR
