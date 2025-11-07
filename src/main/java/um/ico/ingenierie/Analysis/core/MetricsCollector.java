@@ -25,73 +25,73 @@ import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
  * */
 
 @Deprecated(since = "Très fort couplage, très faible cohésion")
-public class MetricsCollector {
+public class MetricsCollector {}
 
-    private CompilationUnit cu;
-    private MetricsData metricsData;
-    private CallGraph callGraph = new CallGraph();
-
-    private static final Logger log = LoggerFactory.getLogger(MetricsCollector.class);
-
-    public MetricsCollector() {
-    }
-
-    public MetricsCollector(CompilationUnit cu,MetricsData metricsData){
-        this.cu = cu;
-        this.metricsData = metricsData;
-    }
-    public MetricsCollector(CompilationUnit cu,MetricsData metricsData, CallGraph callGraph){
-        this.cu = cu;
-        this.metricsData = metricsData;
-        this.callGraph = callGraph;
-    }
-
-    public void collectMetrics(){
-        if (this.cu == null){throw new NoCompilationUnitExceptions();}
-        if (this.metricsData == null){throw new NoMetricsDataException();} // Un peu faible et peu résilient, considère qu'il n'y a qu'une classe par .java
-
-        MyVisitor visitor = new MyVisitor(this.metricsData, cu, callGraph);
-
-        this.cu.accept(visitor);
-
-
-        //TODO RECTIFIER TRES HAUT COUPLAGE
-        AbstractSourcePackage collectedPackage = visitor.getLePaquetSource();
-        AbstractSourceClass collectedClass = visitor.getSourceClass();
-        collectedClass.setPackageParent(collectedPackage);
-        this.metricsData.addClass(collectedClass);
-
-    }
-
-    public CompilationUnit getCu() {
-        return cu;
-    }
-
-    public void setCu(CompilationUnit cu) {
-        this.cu = cu;
-    }
-
-    public static String createMethodSignature(IMethodBinding binding) {
-        if (binding == null) return "unknown.binding";
-
-        StringBuilder signature = new StringBuilder();
-        ITypeBinding declaringClass = binding.getDeclaringClass();
-        if (declaringClass == null || declaringClass.getQualifiedName().isEmpty()) {
-            return "local.class#" + binding.getName();
-        }
-        signature.append(declaringClass.getErasure().getQualifiedName());
-        signature.append("#");
-        signature.append(binding.getName());
-        signature.append("(");
-
-        ITypeBinding[] parameters = binding.getParameterTypes();
-        for (int i = 0; i < parameters.length; i++) {
-            signature.append(parameters[i].getErasure().getQualifiedName());
-            if (i < parameters.length - 1) {
-                signature.append(",");
-            }
-        }
-        signature.append(")");
-        return signature.toString();
-    }
-}
+//    private CompilationUnit cu;
+//    private MetricsData metricsData;
+//    private CallGraph callGraph = new CallGraph();
+//
+//    private static final Logger log = LoggerFactory.getLogger(MetricsCollector.class);
+//
+//    public MetricsCollector() {
+//    }
+//
+//    public MetricsCollector(CompilationUnit cu,MetricsData metricsData){
+//        this.cu = cu;
+//        this.metricsData = metricsData;
+//    }
+//    public MetricsCollector(CompilationUnit cu,MetricsData metricsData, CallGraph callGraph){
+//        this.cu = cu;
+//        this.metricsData = metricsData;
+//        this.callGraph = callGraph;
+//    }
+//
+//    public void collectMetrics(){
+//        if (this.cu == null){throw new NoCompilationUnitExceptions();}
+//        if (this.metricsData == null){throw new NoMetricsDataException();} // Un peu faible et peu résilient, considère qu'il n'y a qu'une classe par .java
+//
+//        MyVisitor visitor = new MyVisitor(this.metricsData, cu, callGraph);
+//
+//        this.cu.accept(visitor);
+//
+//
+//        //TODO RECTIFIER TRES HAUT COUPLAGE
+//        AbstractSourcePackage collectedPackage = visitor.getLePaquetSource();
+//        AbstractSourceClass collectedClass = visitor.getSourceClass();
+//        collectedClass.setPackageParent(collectedPackage);
+//        this.metricsData.addClass(collectedClass);
+//
+//    }
+//
+//    public CompilationUnit getCu() {
+//        return cu;
+//    }
+//
+//    public void setCu(CompilationUnit cu) {
+//        this.cu = cu;
+//    }
+//
+//    public static String createMethodSignature(IMethodBinding binding) {
+//        if (binding == null) return "unknown.binding";
+//
+//        StringBuilder signature = new StringBuilder();
+//        ITypeBinding declaringClass = binding.getDeclaringClass();
+//        if (declaringClass == null || declaringClass.getQualifiedName().isEmpty()) {
+//            return "local.class#" + binding.getName();
+//        }
+//        signature.append(declaringClass.getErasure().getQualifiedName());
+//        signature.append("#");
+//        signature.append(binding.getName());
+//        signature.append("(");
+//
+//        ITypeBinding[] parameters = binding.getParameterTypes();
+//        for (int i = 0; i < parameters.length; i++) {
+//            signature.append(parameters[i].getErasure().getQualifiedName());
+//            if (i < parameters.length - 1) {
+//                signature.append(",");
+//            }
+//        }
+//        signature.append(")");
+//        return signature.toString();
+//    }
+//}

@@ -1,5 +1,6 @@
 package um.ico.ingenierie.Analysis.core;
 
+import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.dom.*;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
 import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceAttributs;
@@ -7,40 +8,39 @@ import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
 import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceMethods;
 import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourcePackage;
 import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.graph.Edge;
 import um.ico.ingenierie.Analysis.Models.graph.EdgeType;
+import um.ico.ingenierie.Common.utils.MySignature;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static um.ico.ingenierie.Analysis.core.MetricsCollector.createMethodSignature;
+import java.util.*;
 
 public class MyVisitor extends ASTVisitor {
 
     private String currentMethodSignature = null;
 
-    private AbstractSourcePackage lePaquetSource = new AbstractSourcePackage();
-    private AbstractSourceClass sourceClass = new AbstractSourceClass();
+    private AbstractSourcePackage localPackage = new AbstractSourcePackage();
+    private AbstractSourceClass localClass = new AbstractSourceClass();
+    private Map<String, Set<Edge>> localEdge = new HashMap<>();
     private CompilationUnit cu;
-    private MetricsData metricsData;
-    private CallGraph callGraph;
+    //private MetricsData metricsData;
+    //private CallGraph callGraph;
 
-    public MyVisitor(MetricsData metricsData, CompilationUnit cu, CallGraph callGraph) {
-        this.metricsData = metricsData;
+    public MyVisitor(CompilationUnit cu) {
+        //this.metricsData = metricsData;
         this.cu = cu;
-        this.callGraph = callGraph;
+        //this.callGraph = callGraph;
     }
 
     @Override
     public boolean visit(PackageDeclaration node){
-        lePaquetSource.setName(node.getName().toString());
-        //numberOfPackage.incrementAndGet();
+        localPackage.setName(node.getName().toString());
         return true;
     }
 
     @Override
     public boolean visit(TypeDeclaration node) {
-        sourceClass.setNameOfClass(node.getName().toString());
-        sourceClass.setPackageParent(lePaquetSource);
+        localClass.setNameOfClass(node.getName().toString());
+        localClass.setPackageParent(localPackage);
 
         int startPosition = node.getStartPosition();
 
@@ -50,7 +50,7 @@ public class MyVisitor extends ASTVisitor {
         int endLine = cu.getLineNumber(endPosition);
         int lineCount = endLine - startLine;
 
-        sourceClass.setNumberOfLinesInClass(lineCount);
+        localClass.setNumberOfLinesInClass(lineCount);
 
         return true;
     }
@@ -58,7 +58,7 @@ public class MyVisitor extends ASTVisitor {
     @Override
     public boolean visit(FieldDeclaration node){
         String nameOfAttributs = node.fragments().get(0).toString();
-        sourceClass.addAttributs(new AbstractSourceAttributs(sourceClass,node.getType().toString(),nameOfAttributs));
+        localClass.addAttributs(new AbstractSourceAttributs(localClass,node.getType().toString(),nameOfAttributs));
         return true;
     }
     @Override
@@ -69,10 +69,11 @@ public class MyVisitor extends ASTVisitor {
             IMethodBinding constructorBinding = node.resolveConstructorBinding();
             if (constructorBinding != null) {
                 // On utilise notre méthode createMethodSignature pour obtenir la signature du constructeur
-                String calleeSignature = createMethodSignature(constructorBinding);
+                String calleeSignature = MySignature.createMethodSignature(constructorBinding);
 
                 // On ajoute une arête de la méthode courante vers le constructeur appelé
-                callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.INSTANTIATION);
+                //TODO REFAIRE CALLGRAPH
+                // callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.INSTANTIATION);
             }
         }
         return super.visit(node);
@@ -86,10 +87,10 @@ public class MyVisitor extends ASTVisitor {
             List<String> listParameters = new ArrayList<>();
             int numberOfLines = 0;
             numberOfLines = numberOfLines + cu.getLineNumber(node.getBody().getLength());
-            sourceClass.addMethod(new AbstractSourceMethods(sourceClass,node.isConstructor(),node.getName().toString(),node.parameters(),node.getReturnType2(),numberOfLines));
+            localClass.addMethod(new AbstractSourceMethods(localClass,node.isConstructor(),node.getName().toString(),node.parameters(),node.getReturnType2(),numberOfLines));
             IMethodBinding binding = node.resolveBinding();
             if (binding != null){
-                this.currentMethodSignature = createMethodSignature(binding) ;
+                this.currentMethodSignature = MySignature.createMethodSignature(binding) ;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -106,8 +107,9 @@ public class MyVisitor extends ASTVisitor {
         if (currentMethodSignature != null){
             IMethodBinding calledMethodBinding = node.resolveMethodBinding();
             if (calledMethodBinding != null){
-                String calleeSignature = createMethodSignature(calledMethodBinding);
-                callGraph.addEdge(currentMethodSignature,calleeSignature, EdgeType.CALL);
+                String calleeSignature = MySignature.createMethodSignature(calledMethodBinding);
+                //TODO REFAIRE CALLGRAPH
+                // callGraph.addEdge(currentMethodSignature,calleeSignature, EdgeType.CALL);
             }
         }
 
@@ -119,27 +121,31 @@ public class MyVisitor extends ASTVisitor {
         if (currentMethodSignature != null) {
             // L'expression dans un throw est souvent un "new Exception(...)"
             // On vérifie donc si c'est une création d'instance
-            if (node.getExpression() instanceof ClassInstanceCreation) {
-                ClassInstanceCreation newException = (ClassInstanceCreation) node.getExpression();
+            if (node.getExpression() instanceof ClassInstanceCreation newException) {
                 IMethodBinding constructorBinding = newException.resolveConstructorBinding();
                 if (constructorBinding != null) {
-                    String calleeSignature = createMethodSignature(constructorBinding);
-                    callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.THROWS);
+                    String calleeSignature = MySignature.createMethodSignature(constructorBinding);
+                    // TODO
+                    //  callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.THROWS);
                 }
             }
         }
         return super.visit(node);
     }
 
-    public AbstractSourcePackage getLePaquetSource() {
-        return lePaquetSource;
+    public AbstractSourcePackage getLocalPackage() {
+        return localPackage;
     }
 
     public AbstractSourceClass getSourceClass() {
-        return sourceClass;
+        return localClass;
     }
 
-    public CallGraph getCallGraph() {
-        return callGraph;
+    public SingleFileAnalysisResult getResult(){
+        return new SingleFileAnalysisResult(getSourceClass(),)
     }
+//
+//    public CallGraph getCallGraph() {
+//        return callGraph;
+//    }
 }
