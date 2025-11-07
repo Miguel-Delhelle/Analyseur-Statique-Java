@@ -3,10 +3,7 @@ package um.ico.ingenierie.Analysis.core;
 import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.dom.*;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
-import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceAttributs;
-import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
-import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceMethods;
-import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourcePackage;
+import um.ico.ingenierie.Analysis.Models.SourceCode.*;
 import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
 import um.ico.ingenierie.Analysis.Models.graph.Edge;
 import um.ico.ingenierie.Analysis.Models.graph.EdgeType;
@@ -41,16 +38,15 @@ public class MyVisitor extends ASTVisitor {
     public boolean visit(TypeDeclaration node) {
         localClass.setNameOfClass(node.getName().toString());
         localClass.setPackageParent(localPackage);
-
         int startPosition = node.getStartPosition();
-
         int endPosition = startPosition + node.getLength() - 1;
-
         int startLine = cu.getLineNumber(startPosition);
         int endLine = cu.getLineNumber(endPosition);
         int lineCount = endLine - startLine;
-
         localClass.setNumberOfLinesInClass(lineCount);
+
+        ITypeBinding binding = node.resolveBinding();
+        localClass.setTypeOfClass(determineNodeType(binding));
 
         return true;
     }
@@ -74,6 +70,7 @@ public class MyVisitor extends ASTVisitor {
                 // On ajoute une arête de la méthode courante vers le constructeur appelé
                 //TODO REFAIRE CALLGRAPH
                 // callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.INSTANTIATION);
+                localEdge.computeIfAbsent(calleeSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.INSTANTIATION));
             }
         }
         return super.visit(node);
@@ -108,8 +105,7 @@ public class MyVisitor extends ASTVisitor {
             IMethodBinding calledMethodBinding = node.resolveMethodBinding();
             if (calledMethodBinding != null){
                 String calleeSignature = MySignature.createMethodSignature(calledMethodBinding);
-                //TODO REFAIRE CALLGRAPH
-                // callGraph.addEdge(currentMethodSignature,calleeSignature, EdgeType.CALL);
+                localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.CALL));
             }
         }
 
@@ -127,6 +123,7 @@ public class MyVisitor extends ASTVisitor {
                     String calleeSignature = MySignature.createMethodSignature(constructorBinding);
                     // TODO
                     //  callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.THROWS);
+                    localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.THROWS));
                 }
             }
         }
@@ -137,12 +134,42 @@ public class MyVisitor extends ASTVisitor {
         return localPackage;
     }
 
-    public AbstractSourceClass getSourceClass() {
+    public String getCurrentMethodSignature() {
+        return currentMethodSignature;
+    }
+
+    public AbstractSourceClass getLocalClass() {
         return localClass;
     }
 
+    public Map<String, Set<Edge>> getLocalEdge() {
+        return localEdge;
+    }
+
+    public CompilationUnit getCu() {
+        return cu;
+    }
+
     public SingleFileAnalysisResult getResult(){
-        return new SingleFileAnalysisResult(getSourceClass(),)
+        return new SingleFileAnalysisResult(getLocalClass(),getLocalEdge());
+    }
+
+    private TypeOfClass determineNodeType(ITypeBinding binding) {
+        if (binding.isInterface()) return TypeOfClass.INTERFACE;
+        if (binding.isEnum()) return TypeOfClass.ENUM;
+        if (binding.isRecord()) return TypeOfClass.RECORD;
+
+        // Vérification pour les exceptions en remontant l'arbre d'héritage
+        ITypeBinding superclass = binding.getSuperclass();
+        while (superclass != null) {
+            if ("java.lang.Throwable".equals(superclass.getQualifiedName())) {
+                return TypeOfClass.EXCEPTION;
+            }
+            superclass = superclass.getSuperclass();
+        }
+
+        // Par défaut, c'est une classe standard.
+        return TypeOfClass.CLASS;
     }
 //
 //    public CallGraph getCallGraph() {

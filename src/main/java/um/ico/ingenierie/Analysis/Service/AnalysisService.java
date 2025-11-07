@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import um.ico.ingenierie.Analysis.core.CodeAnalyzer;
+import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
 
 import java.io.IOException;
@@ -14,11 +15,11 @@ public class AnalysisService {
     private static final Logger log = LoggerFactory.getLogger(AnalysisService.class);
 
 
-   public CodeAnalyzer analyzeProject(IJavaFilesHandler javaFilesHandler) throws IOException{
+   public AnalysisResponse analyzeProject(IJavaFilesHandler javaFilesHandler) throws IOException{
         log.info("Le service d'analyse est appelé pour", javaFilesHandler);
         System.out.println(javaFilesHandler.javaToString());
-        CodeAnalyzer result = new CodeAnalyzer(javaFilesHandler);
-        return result;
+        CodeAnalyzer ca = new CodeAnalyzer(javaFilesHandler);
+        return ca.analyze();
     }
 
 }

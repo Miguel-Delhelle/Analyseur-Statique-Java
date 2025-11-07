@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import um.ico.ingenierie.Analysis.Service.AnalysisService;
 import um.ico.ingenierie.Analysis.core.CodeAnalyzer;
-import um.ico.ingenierie.Api.DTO.GraphDotDTO;
+import um.ico.ingenierie.Api.DTO.GraphDTO;
 import um.ico.ingenierie.Api.DTO.MetricsDto;
 import um.ico.ingenierie.Api.Request.GitAnalysisRequest;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
@@ -17,7 +17,6 @@ import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerGit;
 import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerZip;
 
 import java.io.IOException;
-import java.util.zip.ZipInputStream;
 
 @RestController
 @RequestMapping("/api/analyses")
@@ -34,23 +33,24 @@ public class AnalysisController {
     public ResponseEntity<AnalysisResponse> analyzeZip(@RequestParam("file") MultipartFile file) throws IOException {
         log.info("Requête reçue sur /zip pour le fichier : {}", file.getOriginalFilename());
         IJavaFilesHandler gestionFiles = new JavaFilesHandlerZip(file);
-        CodeAnalyzer results = analysisService.analyzeProject(gestionFiles);
-        return ResponseEntity.ok(createAnalysisResponse(results));
+        AnalysisResponse results = analysisService.analyzeProject(gestionFiles);
+        return ResponseEntity.ok(results);
     }
 
     @PostMapping("/git")
     public ResponseEntity<AnalysisResponse> analyzeGit(@RequestBody GitAnalysisRequest request) throws GitAPIException, IOException {
         log.info("Requête reçue sur /git pour l'URL : {}", request.uriGit());
         IJavaFilesHandler gestionFiles = new JavaFilesHandlerGit(request.uriGit());
-        CodeAnalyzer results = analysisService.analyzeProject(gestionFiles);
-        return ResponseEntity.ok(createAnalysisResponse(results));
+        AnalysisResponse results = analysisService.analyzeProject(gestionFiles);
+        return ResponseEntity.ok(results);
     }
 
 
-    private AnalysisResponse createAnalysisResponse(CodeAnalyzer results) {
-        MetricsDto metricsDto = MetricsDto.from(results.getMetricsData());
-        results.getMetricsData().determineBasePackage();
-        GraphDotDTO graphDto = GraphDotDTO.from(results.getCallGraph(), results.getMetricsData(),true);
-        return new AnalysisResponse(metricsDto, graphDto);
-    }
+//    @Deprecated(since = "plus utile")
+//    private AnalysisResponse createAnalysisResponse(CodeAnalyzer results) {
+//        MetricsDto metricsDto = MetricsDto.from(results.getMetricsData());
+//        results.getMetricsData().determineBasePackage();
+//        GraphDTO graphDto = GraphDTO.from(results.getCallGraph(), results.getMetricsData(),true);
+//        return new AnalysisResponse(metricsDto, graphDto);
+//    }
 }

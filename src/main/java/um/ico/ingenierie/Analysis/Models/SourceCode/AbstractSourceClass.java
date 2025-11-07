@@ -19,25 +19,20 @@ public class AbstractSourceClass implements Serializable {
     private AbstractSourcePackage packageParent;
     private List<AbstractSourceMethods> abstractSourceMethodsList = new ArrayList<AbstractSourceMethods>();
     private List<AbstractSourceAttributs> abstractAttributsSourceList = new ArrayList<AbstractSourceAttributs>();
-    private int numberOfMethods = 0;
-    //private int numberOfAttributs = 0;
     private int numberOfLinesInClass = 0;
+    private TypeOfClass typeOfClass;
 
     public AbstractSourceClass() {
     }
 
-    public AbstractSourceClass(String nameOfClass, int numberOfMethods, int numberOfLinesInClass) {
+    public AbstractSourceClass(String nameOfClass, int numberOfLinesInClass) {
         this.nameOfClass = nameOfClass;
-        this.numberOfMethods = numberOfMethods;
+        //this.numberOfMethods = numberOfMethods;
         this.numberOfLinesInClass = numberOfLinesInClass;
     }
 
     public void setNameOfClass(String nameOfClass) {
         this.nameOfClass = nameOfClass;
-    }
-
-    public void setNumberOfMethods(int numberOfMethods) {
-        this.numberOfMethods = numberOfMethods;
     }
 
     public void setNumberOfLinesInClass(int numberOfLinesInClass) {
@@ -54,7 +49,7 @@ public class AbstractSourceClass implements Serializable {
 
     public boolean isEmpty() {
         boolean noName = (nameOfClass == null || nameOfClass.isEmpty());
-        boolean noMethods = (numberOfMethods == 0);
+        boolean noMethods = (getNumberOfMethods() == 0);
         //boolean noAttributes = (numberOfAttributs == 0);
         boolean noLines = (numberOfLinesInClass == 0);
 
@@ -101,6 +96,14 @@ public class AbstractSourceClass implements Serializable {
         return this.getAbstractSourceMethodsList()
                 .stream()
                 .filter(abstractSourceMethods -> !abstractSourceMethods.isConstructor()).toList().size();
+    }
+
+    public TypeOfClass getTypeOfClass() {
+        return typeOfClass;
+    }
+
+    public void setTypeOfClass(TypeOfClass typeOfClass) {
+        this.typeOfClass = typeOfClass;
     }
 
     public String getNameOfClass() {

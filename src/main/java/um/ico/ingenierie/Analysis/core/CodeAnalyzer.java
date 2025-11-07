@@ -6,6 +6,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.Common.Exceptions.NoCompilationUnitExceptions;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
 import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerPath;
@@ -52,7 +53,7 @@ public class CodeAnalyzer {
         this.analyze();
     }
 
-    public void analyze(){
+    public AnalysisResponse analyze(){
 
         log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.javaFilesHandlerPath.getRootPath());
         log.debug("Nombre de fichiers .java trouvés : {}", this.javaPathList.size());
@@ -65,28 +66,41 @@ public class CodeAnalyzer {
 
         for (Path filePath : this.javaPathList){
             try{
-                ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-                parser.setResolveBindings(true);
-                parser.setKind(ASTParser.K_COMPILATION_UNIT);
-                parser.setEnvironment(classPath,sources,null, true);
-                parser.setUnitName(filePath.toString());
-                parser.setSource(JavaFilesHandlerPath.getJavaFile(filePath));
-                CompilationUnit cu = (CompilationUnit) parser.createAST(null);
-                if (cu == null) {
-                    log.error("AVERTISSEMENT: Impossible de créer l'AST pour " + filePath);
-                    throw new NoCompilationUnitExceptions();
-                }
-                if (cu.getProblems() != null && cu.getProblems().length > 0) {
-                    log.warn("AVERTISSEMENT: Problèmes de compilation détectés dans " + filePath + ". Les bindings pourraient être incomplets.");
-                }
-                MetricsCollector metricsCollector = new MetricsCollector(cu, this.metricsData, this.callGraph);
-                metricsCollector.collectMetrics();
+                CompilationUnit cu = initCu(classPath,sources,filePath);
+                MyVisitor visitor = new MyVisitor(cu);
+                cu.accept(visitor);
+
+                SingleFileAnalysisResult singleFileAnalysisResult = visitor.getResult();
+
                 log.info("Analyse terminée.");
+
+                metricsData.addClass(singleFileAnalysisResult.getFoundClass());
+                callGraph.addEdges(singleFileAnalysisResult.getFoundEdges());
+
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
+        return AnalysisResponse.from(getMetricsData(),getCallGraph());
+    }
+
+    private CompilationUnit initCu(String[] classPath,String[] sources,Path filePath) throws IOException {
+        ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+        parser.setResolveBindings(true);
+        parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        parser.setEnvironment(classPath,sources,null, true);
+        parser.setUnitName(filePath.toString());
+        parser.setSource(JavaFilesHandlerPath.getJavaFile(filePath));
+        CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+        if (cu == null) {
+            log.error("AVERTISSEMENT: Impossible de créer l'AST pour " + filePath);
+            throw new NoCompilationUnitExceptions();
+        }
+        if (cu.getProblems() != null && cu.getProblems().length > 0) {
+            log.warn("AVERTISSEMENT: Problèmes de compilation détectés dans " + filePath + ". Les bindings pourraient être incomplets.");
+        }
+        return cu;
     }
 
     public MetricsData getMetricsData() {

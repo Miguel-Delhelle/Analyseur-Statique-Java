@@ -38,4 +38,8 @@ public class CallGraph {
         }
         return sb.toString();
     }
+
+    public Map<String, Set<Edge>> getAdjacencyList() {
+        return adjacencyList;
+    }
 }
