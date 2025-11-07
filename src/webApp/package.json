@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
     "typescript": "~5.9.3",
     "vite": "^7.1.7"
   },
   "dependencies": {
-    "@hpcc-js/wasm": "^2.26.3"
+    "@hpcc-js/wasm": "^2.26.3",
+    "d3": "^7.9.0"
   }
 }

@@ -50,7 +50,7 @@ public class AnalysisController {
     private AnalysisResponse createAnalysisResponse(CodeAnalyzer results) {
         MetricsDto metricsDto = MetricsDto.from(results.getMetricsData());
         results.getMetricsData().determineBasePackage();
-        GraphDotDTO graphDto = GraphDotDTO.from(results.getCallGraph(), results.getMetricsData(),false);
+        GraphDotDTO graphDto = GraphDotDTO.from(results.getCallGraph(), results.getMetricsData(),true);
         return new AnalysisResponse(metricsDto, graphDto);
     }
 }

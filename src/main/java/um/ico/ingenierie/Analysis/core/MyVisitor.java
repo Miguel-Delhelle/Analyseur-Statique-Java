@@ -131,35 +131,6 @@ public class MyVisitor extends ASTVisitor {
         return super.visit(node);
     }
 
-//    @Override
-//    public void postVisit(ASTNode node) {
-//        //this.updateData(this.sourceClass,this.lePaquetSource);
-//        super.postVisit(node);
-//    }
-
-    @Deprecated(since = "N'as plus aucun sens ici")
-    public void updateData(AbstractSourceClass sourceClass, AbstractSourcePackage sourcePackage){
-        //Seul chose ancienne tjrs logique
-
-        int lastCharacterPosition = this.cu.getStartPosition()+this.cu.getLength() -1;
-        int lastLine = this.cu.getLineNumber(lastCharacterPosition);
-        //sourceClass.setNumberOfLinesInClass(this.numberOfLine.addAndGet(lastLine));
-
-        //this.metricsData.numberOfLines.addAndGet(this.numberOfLine.get());
-
-        //TODO Enlever cette logique
-        //this.metricsData.getNumberOfClass().addAndGet(this.compteurClass.get());
-        //this.metricsData.numberOfMethods.addAndGet(this.methodCounter.get());
-        //sourceClass.setNumberOfMethods(this.methodCounter.get());
-
-        //Approche nouvelle
-        sourceClass.setPackageParent(sourcePackage);
-        this.metricsData.addClass(sourceClass);
-
-        /*this.lePaquetSource.addClassToPackage(this.cLaClasse);
-        this.metricsData.addPackage(this.lePaquetSource); */
-    }
-
     public AbstractSourcePackage getLePaquetSource() {
         return lePaquetSource;
     }
@@ -171,8 +142,4 @@ public class MyVisitor extends ASTVisitor {
     public CallGraph getCallGraph() {
         return callGraph;
     }
-
-    //    public int getNumberOfLines(){
-//
-//    }
 }

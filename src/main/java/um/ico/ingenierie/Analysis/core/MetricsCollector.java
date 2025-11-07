@@ -24,6 +24,7 @@ import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
  * @version 1.0
  * */
 
+@Deprecated(since = "Très fort couplage, très faible cohésion")
 public class MetricsCollector {
 
     private CompilationUnit cu;
@@ -53,11 +54,11 @@ public class MetricsCollector {
 
         this.cu.accept(visitor);
 
+
+        //TODO RECTIFIER TRES HAUT COUPLAGE
         AbstractSourcePackage collectedPackage = visitor.getLePaquetSource();
         AbstractSourceClass collectedClass = visitor.getSourceClass();
-
         collectedClass.setPackageParent(collectedPackage);
-
         this.metricsData.addClass(collectedClass);
 
     }
@@ -75,13 +76,9 @@ public class MetricsCollector {
 
         StringBuilder signature = new StringBuilder();
         ITypeBinding declaringClass = binding.getDeclaringClass();
-
-        // Protection contre les classes anonymes ou locales qui n'ont pas de nom qualifié
         if (declaringClass == null || declaringClass.getQualifiedName().isEmpty()) {
             return "local.class#" + binding.getName();
         }
-
-        // On utilise l'effacement de type (erasure) pour la classe
         signature.append(declaringClass.getErasure().getQualifiedName());
         signature.append("#");
         signature.append(binding.getName());
@@ -89,7 +86,6 @@ public class MetricsCollector {
 
         ITypeBinding[] parameters = binding.getParameterTypes();
         for (int i = 0; i < parameters.length; i++) {
-            // On utilise aussi l'effacement de type pour chaque paramètre
             signature.append(parameters[i].getErasure().getQualifiedName());
             if (i < parameters.length - 1) {
                 signature.append(",");
