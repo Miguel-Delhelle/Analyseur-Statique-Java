@@ -3,7 +3,7 @@ package um.ico.ingenierie.Analysis.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import um.ico.ingenierie.Analysis.core.CodeAnalyzer;
+import um.ico.ingenierie.Analysis.CodeAnalyzer;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
 
@@ -17,7 +17,7 @@ public class AnalysisService {
 
    public AnalysisResponse analyzeProject(IJavaFilesHandler javaFilesHandler) throws IOException{
         log.info("Le service d'analyse est appelé pour", javaFilesHandler);
-        System.out.println(javaFilesHandler.javaToString());
+        //System.out.println(javaFilesHandler.javaToString());
         CodeAnalyzer ca = new CodeAnalyzer(javaFilesHandler);
         return ca.analyze();
     }

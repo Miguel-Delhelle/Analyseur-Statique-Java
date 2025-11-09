@@ -26,7 +26,6 @@ public class CallGraph {
         });
     }
 
-    // On pourrait ajouter une méthode pour afficher le graphe (format DOT, etc.)
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("Graphe d'Appel :\n");
@@ -42,4 +41,13 @@ public class CallGraph {
     public Map<String, Set<Edge>> getAdjacencyList() {
         return adjacencyList;
     }
+
+    public int getNumberOfEdges(){
+        int totalEdges = 0;
+        for (Set<Edge> edges : this.getAdjacencyList().values()){
+            totalEdges = totalEdges + edges.size();
+        };
+        return totalEdges;
+    }
+
 }

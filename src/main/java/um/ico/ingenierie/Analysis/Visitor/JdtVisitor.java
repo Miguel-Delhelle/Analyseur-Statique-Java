@@ -1,4 +1,4 @@
-package um.ico.ingenierie.Analysis.core;
+package um.ico.ingenierie.Analysis.Visitor;
 
 import org.eclipse.jdt.core.dom.*;
 import um.ico.ingenierie.Analysis.Models.SourceCode.*;

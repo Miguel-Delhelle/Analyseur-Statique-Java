@@ -1,4 +1,4 @@
-package um.ico.ingenierie.Analysis.core;
+package um.ico.ingenierie.Analysis;
 
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
 import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
+import um.ico.ingenierie.Analysis.Visitor.JdtVisitor;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.Common.Exceptions.NoCompilationUnitExceptions;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
@@ -17,7 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
+
 /**
  * Le CodeAnalyzer a pour but de parcourir une arborescence de fichiers donnée par le JavaFilesHandler
  * et d'exécuter une Analyze, elle prend en entrée un path, si il n'est pas renseigné il execute sur lui même.
