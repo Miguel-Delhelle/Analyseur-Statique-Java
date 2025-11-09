@@ -3,6 +3,8 @@
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import um.ico.ingenierie.Analysis.core.CodeAnalyzer;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
 import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerPath;
@@ -21,8 +23,7 @@ import java.nio.file.Paths;
 @SpringBootApplication
 public class AstIngenierieApplication {
 
-	public static void main(String[] args) throws IOException, GitAPIException {
-		SpringApplication.run(AstIngenierieApplication.class, args);
+    public static void main(String[] args) {
+        SpringApplication.run(AstIngenierieApplication.class, args);
     }
-
 }

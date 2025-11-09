@@ -6,6 +6,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.Common.Exceptions.NoCompilationUnitExceptions;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
@@ -32,42 +33,37 @@ public class CodeAnalyzer {
 
     private static final Logger log = LoggerFactory.getLogger(CodeAnalyzer.class);
 
-    private IJavaFilesHandler javaFilesHandlerPath = new JavaFilesHandlerPath();
-    private List<Path> javaPathList = this.javaFilesHandlerPath.getAllPathJava();
-    private MetricsData metricsData = new MetricsData();
-    private CallGraph callGraph = new CallGraph();
+    private IJavaFilesHandler javaFilesHandlerPath;
 
-    public CodeAnalyzer() throws IOException {
+    public CodeAnalyzer() {
 
     }
 
     public CodeAnalyzer(String path) throws IOException {
         this.javaFilesHandlerPath = new JavaFilesHandlerPath(path);
-        this.javaPathList = this.javaFilesHandlerPath.getAllPathJava();
-        this.analyze();
     }
 
     public CodeAnalyzer(IJavaFilesHandler javaFilesHandler) throws IOException {
         this.javaFilesHandlerPath = javaFilesHandler;
-        this.javaPathList = this.javaFilesHandlerPath.getAllPathJava();
-        this.analyze();
     }
 
     public AnalysisResponse analyze(){
 
         log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.javaFilesHandlerPath.getRootPath());
-        log.debug("Nombre de fichiers .java trouvés : {}", this.javaPathList.size());
+        log.debug("Nombre de fichiers .java trouvés : {}", this.javaFilesHandlerPath.getAllPathJava().size());
 
         String[] classPath = System.getProperty("java.class.path").split(File.pathSeparator);
         String[] sources = {this.getJavaFilesHandler().getRootPath().toString()};
 
         log.info("Classpath utilisé : " + Arrays.toString(classPath));
         log.info("Sourcepath utilisé : " + Arrays.toString(sources));
+        MetricsData metricsData = new MetricsData();
+        CallGraph callGraph = new CallGraph();
 
-        for (Path filePath : this.javaPathList){
+        for (Path filePath : this.javaFilesHandlerPath.getAllPathJava()){
             try{
                 CompilationUnit cu = initCu(classPath,sources,filePath);
-                MyVisitor visitor = new MyVisitor(cu);
+                JdtVisitor visitor = new JdtVisitor(cu);
                 cu.accept(visitor);
 
                 SingleFileAnalysisResult singleFileAnalysisResult = visitor.getResult();
@@ -82,7 +78,7 @@ public class CodeAnalyzer {
                 throw new RuntimeException(e);
             }
         }
-        return AnalysisResponse.from(getMetricsData(),getCallGraph());
+        return AnalysisResponse.from(metricsData,callGraph);
     }
 
     private CompilationUnit initCu(String[] classPath,String[] sources,Path filePath) throws IOException {
@@ -102,14 +98,14 @@ public class CodeAnalyzer {
         }
         return cu;
     }
-
-    public MetricsData getMetricsData() {
-        return metricsData;
-    }
-
-    public CallGraph getCallGraph(){
-        return this.callGraph;
-    }
+//
+//    public MetricsData getMetricsData() {
+//        return metricsData;
+//    }
+//
+//    public CallGraph getCallGraph(){
+//        return this.callGraph;
+//    }
 
     protected IJavaFilesHandler getJavaFilesHandler() {
         return javaFilesHandlerPath;

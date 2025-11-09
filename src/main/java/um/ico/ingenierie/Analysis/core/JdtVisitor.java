@@ -1,17 +1,15 @@
 package um.ico.ingenierie.Analysis.core;
 
-import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.dom.*;
-import um.ico.ingenierie.Analysis.Models.MetricsData;
 import um.ico.ingenierie.Analysis.Models.SourceCode.*;
-import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
 import um.ico.ingenierie.Analysis.Models.graph.Edge;
 import um.ico.ingenierie.Analysis.Models.graph.EdgeType;
+import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
 import um.ico.ingenierie.Common.utils.MySignature;
 
 import java.util.*;
 
-public class MyVisitor extends ASTVisitor {
+public class JdtVisitor extends ASTVisitor {
 
     private String currentMethodSignature = null;
 
@@ -22,7 +20,7 @@ public class MyVisitor extends ASTVisitor {
     //private MetricsData metricsData;
     //private CallGraph callGraph;
 
-    public MyVisitor(CompilationUnit cu) {
+    public JdtVisitor(CompilationUnit cu) {
         //this.metricsData = metricsData;
         this.cu = cu;
         //this.callGraph = callGraph;
@@ -70,7 +68,7 @@ public class MyVisitor extends ASTVisitor {
                 // On ajoute une arête de la méthode courante vers le constructeur appelé
                 //TODO REFAIRE CALLGRAPH
                 // callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.INSTANTIATION);
-                localEdge.computeIfAbsent(calleeSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.INSTANTIATION));
+                localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.INSTANTIATION));
             }
         }
         return super.visit(node);

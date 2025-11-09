@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <!-- Auteur Delhelle Miguel -->
     <meta charset="UTF-8">
     <title>Analyseur de Code Java</title>
     <link rel="stylesheet" href="/src/style.css">
@@ -14,24 +13,21 @@
 
     <main>
         <section id="controls">
-            <!-- Option 1: Analyse par URL Git -->
             <div class="analysis-option">
                 <h2>Analyser un dépôt Git</h2>
-                <input type="text" id="gitUrlInput" placeholder="https://github.com/user/repo.git" size="50">
-                <button id="analyzeGitBtn">Lancer l'Analyse Git</button>
+                <input type="text" id="gitUrlInput" placeholder="https://github.com/user/repo.git">
+                <button id="analyzeGitBtn">Lancer l'Analyse</button>
             </div>
 
-            <!-- Option 2: Analyse par Upload de ZIP -->
             <div class="analysis-option">
                 <h2>Analyser un projet .zip</h2>
                 <input type="file" id="zipFileInput" accept=".zip">
-                <button id="analyzeZipBtn">Lancer l'Analyse ZIP</button>
+                <button id="analyzeZipBtn">Lancer l'Analyse</button>
             </div>
         </section>
 
-        <!-- Zone d'affichage des résultats, cachée par défaut -->
         <section id="results" class="hidden">
-            <div id="loader" class="hidden">
+            <div id="loader">
                 <p>Analyse en cours, veuillez patienter...</p>
             </div>
 
@@ -45,18 +41,36 @@
                     </tbody>
                 </table>
 
-                <h3>Graphe d'Appel (DOT)</h3>
+                <h3>Graphe d'Appel Interactif</h3>
+                
+                <div id="view-selector">
+                    <button class="view-btn active" data-view="force">Explorateur de Flux</button>
+                    <button class="view-btn" data-view="arc">Diagramme d'Arcs</button>
+                    <button class="view-btn" data-view="matrix">Matrice de Connectivité</button>
+                </div>
+
+                <div id="graph-controls">
+                    <strong>Filtres :</strong>
+                    <label><input type="checkbox" id="filter-call" value="CALL" checked> Appels</label>
+                    <label><input type="checkbox" id="filter-instantiation" value="INSTANTIATION" checked> Instanciations</label>
+                    <label><input type="checkbox" id="filter-throws" value="THROWS" checked> Exceptions</label>
+                    <label class="control-separator">
+                        <input type="checkbox" id="filter-internal" checked> Uniquement les appels internes
+                    </label>
+                </div>
+
                 <div id="graphContainer">
-                    <!-- Le graphe SVG sera injecté ici par JavaScript -->
+                    <!-- Le graphe SVG sera injecté ici -->
+                </div>
+                
+                <div class="graph-actions">
+                    <button id="fullscreen-btn">Plein écran</button>
+                    <a id="downloadBtn" href="#" download="call-graph.svg">Télécharger (SVG)</a>
                 </div>
             </div>
-
-            <!-- AJOUTE CETTE LIGNE -->
-            <a id="downloadBtn" class="hidden" href="#" download="call-graph.svg">Télécharger le graphe (SVG)</a>
         </section>
     </main>
 
-    <!-- On lie notre script principal. 'type="module"' est crucial pour Vite. -->
     <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -21,7 +21,7 @@ public class NoJavaPathExceptions extends IOException {
         super("Le chemin indiqué ne correspond pas à du code Java");
     }
     public NoJavaPathExceptions(Path leChemin) {
-        super ("Erreur, le chemin: "+leChemin.toString()+"ne correspond pas à du code Java, relancez le programme");
+        super ("Erreur, le chemin: "+leChemin.toString()+" ne correspond pas à du code Java, relancez le programme");
         this.leChemin = leChemin;
     }
 

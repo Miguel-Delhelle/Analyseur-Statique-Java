@@ -1,4 +1,4 @@
-package um.ico.ingenierie.Analysis.core;
+package um.ico.ingenierie.Analysis.Result;
 
 import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
 import um.ico.ingenierie.Analysis.Models.graph.Edge;
