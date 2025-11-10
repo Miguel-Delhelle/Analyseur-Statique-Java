@@ -48,7 +48,7 @@ public class CodeAnalyzer {
         this.javaFilesHandlerPath = javaFilesHandler;
     }
 
-    public AnalysisResponse analyze(){
+    public AnalysisResponse analyze() {
 
         log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.javaFilesHandlerPath.getRootPath());
         log.debug("Nombre de fichiers .java trouvés : {}", this.javaFilesHandlerPath.getAllPathJava().size());

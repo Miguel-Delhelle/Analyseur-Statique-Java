@@ -21,6 +21,7 @@ import java.util.stream.Stream;
  * @version 1.0
  */
 
+@Deprecated(since = "")
 public class JavaFilesHandlerPath implements IJavaFilesHandler {
 
     private Path chemin = Paths.get(".");

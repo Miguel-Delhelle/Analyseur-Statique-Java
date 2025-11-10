@@ -39,4 +39,12 @@ public class Edge {
                 ", type=" + type +
                 '}';
     }
+
+    public String getCalleeSignature() {
+        return calleeSignature;
+    }
+
+    public EdgeType getType() {
+        return type;
+    }
 }
