@@ -71,7 +71,7 @@ public class JdtVisitor extends ASTVisitor {
                 localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.INSTANTIATION));
             }
         }
-        return super.visit(node);
+        return false;
     }
 
     @Override
@@ -107,7 +107,7 @@ public class JdtVisitor extends ASTVisitor {
             }
         }
 
-        return true;
+        return false;
     }
     @Override
     public boolean visit(ThrowStatement node) {

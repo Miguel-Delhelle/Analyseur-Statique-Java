@@ -22,57 +22,64 @@ public class CouplingService {
         String basePackage = MySignature.determineBasePackage(callGraph);
         int totalEdges = callGraph.getNumberOfEdges();
         Map<String,Set<Edge>> adjacencyList = callGraph.getAdjacencyList();
-        Map<String, PaireClass> nbrLienEntreClass = new HashMap<>();
-        Map<String, Double> nbrLienDeToutesLesClasses = new HashMap<>();
+
+        //Numérateur
+        Map<String, PaireClass> lienEntrePairs = new HashMap<>();
+
+        //Dénominateur
+        Map<String, Integer> nbrLienEntreToutesLesClasses = new HashMap<>();
 
         // Algo
         for (Map.Entry<String,Set<Edge> > graph : adjacencyList.entrySet()){
             String callerSignature = graph.getKey(); // Récupération de la clé qui est la signature entière de la classe
-
             if (basePackage != null && !basePackage.isEmpty() && !callerSignature.startsWith(basePackage)) {
                 continue;
             }
-
-            String callerClassName = MySignature.signatureToNameOfClass(callerSignature);
-
+            String classMale = MySignature.signatureToNameOfClass(callerSignature);
             Set<Edge> arretes = graph.getValue();
-            double nbrDeLienSortantDeLaClasse = 0;
+            int nbrDeLienSortantDeLaClasse = 0;
 
             for (Edge arrete: arretes){
 
+                String classFemelle = MySignature.signatureToNameOfClass(arrete.getCalleeSignature());
                 if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
                     continue;
                 }
 
-                if (!MySignature.signatureToNameOfClass(arrete.getCalleeSignature()).equals(callerClassName)){
+                if (!classFemelle.equals(classMale)){
+                    nbrDeLienSortantDeLaClasse++;
+                    PaireClass newCouple = new PaireClass(classMale,classFemelle);
+                    String currentSignatureOfCouple = newCouple.twoSignature();
 
-                    PaireClass nouvellePaire = new PaireClass(
-                            MySignature.signatureToNameOfClass(callerSignature),
-                            MySignature.signatureToNameOfClass(arrete.getCalleeSignature()));
+                    lienEntrePairs.putIfAbsent(currentSignatureOfCouple, newCouple);
 
-
-                    nbrLienEntreClass.putIfAbsent(nouvellePaire.twoSignature(), nouvellePaire);
-                    if (nbrLienEntreClass.containsKey(nouvellePaire.twoSignature())){
-                        nbrLienEntreClass.get(nouvellePaire.twoSignature()).addOneLink();
-                        nbrDeLienSortantDeLaClasse++;
-                    }
+                    lienEntrePairs.get(currentSignatureOfCouple).addOneLink();
                 }
             }
-            nbrLienDeToutesLesClasses.put(callerClassName,nbrDeLienSortantDeLaClasse);
+
+            //JUSTE CETTE CONDITION CA SERVAIT A RIEN DE FAIRE UNE USINE A GAZ
+            // ENfAITE MON CALLGRAPH N'A PAS FORCEMENT LES VALEURS DANS L'ORDRE DONC ON ECRASAIT DES PRECEDENTES CLASSE QUI EXISTAIT DEJA
+            if (nbrLienEntreToutesLesClasses.containsKey(classMale)){
+                int valeurActuelle = nbrLienEntreToutesLesClasses.get(classMale);
+                nbrLienEntreToutesLesClasses.put(classMale,valeurActuelle+nbrDeLienSortantDeLaClasse);
+            }
+            else {
+                nbrLienEntreToutesLesClasses.put(classMale,nbrDeLienSortantDeLaClasse);
+            }
         }
 
         // Parcours de la Map pour appliquer le taux de couplage.
-        for (PaireClass unePaireDeClass: nbrLienEntreClass.values()){
-            System.out.println(nbrLienDeToutesLesClasses);
-            unePaireDeClass.setCouplage(nbrLienDeToutesLesClasses);
+        for (PaireClass unePaireDeClass: lienEntrePairs.values()){
+            //System.out.println(nbrLienDeToutesLesClasses);
+            unePaireDeClass.setCouplage(nbrLienEntreToutesLesClasses);
         }
-        return nbrLienEntreClass;
+        return lienEntrePairs;
     }
 
     private class PaireClass{
         public String signClassA;
         public String signClassB;
-        public double nbrOfLink = 0.0;
+        public int nbrOfLink = 0;
         public double couplage;
 
         public PaireClass(String signClassA, String signClassB){
@@ -95,7 +102,7 @@ public class CouplingService {
         }
 
         public void addOneLink(){
-            this.nbrOfLink = this.nbrOfLink + 1.0;
+            this.nbrOfLink = this.nbrOfLink + 1;
         }
 
         @Override
@@ -103,23 +110,16 @@ public class CouplingService {
             return couplage+"-"+twoSignature();
         }
 
-        public void setCouplage(Map<String,Double> nbrLiensToutesLesClasses) {
-            double nbrLienClassA = 0.0;
-            double nbrLienClassB = 0.0;
-            if (!nbrLiensToutesLesClasses.containsKey(signClassA)){
-                log.warn("La class: "+signClassA+" n'existe pas dans la Map de lien interne!");
-                nbrLienClassB = nbrLiensToutesLesClasses.get(signClassB);
-            }
-            else if (!nbrLiensToutesLesClasses.containsKey(signClassB)) {
-                log.warn("La class: "+signClassB+" n'existe pas dans la Map de lien interne!");
-                nbrLienClassA = nbrLiensToutesLesClasses.get(signClassA);
-            }
-            else {
-                nbrLienClassA = nbrLiensToutesLesClasses.get(signClassA);
-                nbrLienClassB = nbrLiensToutesLesClasses.get(signClassB);
-            }
+        public void setCouplage(Map<String,Integer> nbrLiensToutesLesClasses) {
+            int nbrLienClassA = nbrLiensToutesLesClasses.getOrDefault(signClassA,0);
+            int nbrLienClassB = nbrLiensToutesLesClasses.getOrDefault(signClassB,0);
+            log.info("NbrLink: "+nbrOfLink+" du couple: "+signClassA+"#"+signClassB);
             double totalLienDesDeuxClasses = nbrLienClassA+nbrLienClassB;
-            this.couplage = nbrOfLink/totalLienDesDeuxClasses;
+            log.info("NbrLiendeLaClass"+signClassA+" : "+nbrLienClassA);
+            log.info("NbrLiendeLaClass"+signClassB+" : "+nbrLienClassB);
+            log.info("Total des liens sortants des deux classes du couple"+totalLienDesDeuxClasses);
+            this.couplage = (double) nbrOfLink/ totalLienDesDeuxClasses;
+            log.info("Couplage du couple: "+this.couplage);
         }
     }
 
