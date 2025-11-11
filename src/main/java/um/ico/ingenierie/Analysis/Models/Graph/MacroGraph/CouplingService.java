@@ -1,10 +1,10 @@
-package um.ico.ingenierie.Analysis.Service;
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
-import um.ico.ingenierie.Analysis.Models.graph.Edge;
-import um.ico.ingenierie.Common.utils.MySignature;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
+import um.ico.ingenierie.Common.utils.IcoUtils;
 
 import java.util.*;
 
@@ -12,14 +12,14 @@ public class CouplingService {
 
     private static final Logger log = LoggerFactory.getLogger(CouplingService.class);
 
-    public CouplingService(){
+    private CouplingService(){
 
     }
 
-    public Map<String,PaireClass> TreeCoupling(CallGraph callGraph) {
+    public static Map<String,PaireClass> TreeCoupling(CallGraph callGraph) {
 
         //Variables d'entrée
-        String basePackage = MySignature.determineBasePackage(callGraph);
+        String basePackage = IcoUtils.determineBasePackage(callGraph);
         int totalEdges = callGraph.getNumberOfEdges();
         Map<String,Set<Edge>> adjacencyList = callGraph.getAdjacencyList();
 
@@ -35,13 +35,13 @@ public class CouplingService {
             if (basePackage != null && !basePackage.isEmpty() && !callerSignature.startsWith(basePackage)) {
                 continue;
             }
-            String classMale = MySignature.signatureToNameOfClass(callerSignature);
+            String classMale = IcoUtils.signatureToQualifiedClassName(callerSignature);
             Set<Edge> arretes = graph.getValue();
             int nbrDeLienSortantDeLaClasse = 0;
 
             for (Edge arrete: arretes){
 
-                String classFemelle = MySignature.signatureToNameOfClass(arrete.getCalleeSignature());
+                String classFemelle = IcoUtils.signatureToQualifiedClassName(arrete.getCalleeSignature());
                 if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
                     continue;
                 }
@@ -74,53 +74,6 @@ public class CouplingService {
             unePaireDeClass.setCouplage(nbrLienEntreToutesLesClasses);
         }
         return lienEntrePairs;
-    }
-
-    private class PaireClass{
-        public String signClassA;
-        public String signClassB;
-        public int nbrOfLink = 0;
-        public double couplage;
-
-        public PaireClass(String signClassA, String signClassB){
-            if (signClassA.compareTo(signClassB) <= 0) {
-                this.signClassA = signClassA;
-                this.signClassB = signClassB;
-            } else {
-                this.signClassA = signClassB;
-                this.signClassB = signClassA;
-            }
-        }
-
-        public boolean equals(PaireClass that) {
-            return (signClassA.equals(that.signClassA) && signClassB.equals(that.signClassB)) ||
-                    (signClassA.equals(that.signClassB) && signClassB.equals(that.signClassA));
-        }
-
-        public String twoSignature(){
-            return "COUPLING_"+this.signClassA + "#"+ this.signClassB;
-        }
-
-        public void addOneLink(){
-            this.nbrOfLink = this.nbrOfLink + 1;
-        }
-
-        @Override
-        public String toString(){
-            return couplage+"-"+twoSignature();
-        }
-
-        public void setCouplage(Map<String,Integer> nbrLiensToutesLesClasses) {
-            int nbrLienClassA = nbrLiensToutesLesClasses.getOrDefault(signClassA,0);
-            int nbrLienClassB = nbrLiensToutesLesClasses.getOrDefault(signClassB,0);
-            log.info("NbrLink: "+nbrOfLink+" du couple: "+signClassA+"#"+signClassB);
-            double totalLienDesDeuxClasses = nbrLienClassA+nbrLienClassB;
-            log.info("NbrLiendeLaClass"+signClassA+" : "+nbrLienClassA);
-            log.info("NbrLiendeLaClass"+signClassB+" : "+nbrLienClassB);
-            log.info("Total des liens sortants des deux classes du couple"+totalLienDesDeuxClasses);
-            this.couplage = (double) nbrOfLink/ totalLienDesDeuxClasses;
-            log.info("Couplage du couple: "+this.couplage);
-        }
     }
 
 }

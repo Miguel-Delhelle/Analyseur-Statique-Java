@@ -17,6 +17,7 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/analyses")
+@CrossOrigin(origins = "http://localhost:5173")
 public class AnalysisController {
 
     private static final Logger log = LoggerFactory.getLogger(AnalysisController.class);

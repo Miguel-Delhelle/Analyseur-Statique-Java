@@ -2,10 +2,10 @@ package um.ico.ingenierie.Analysis.Visitor;
 
 import org.eclipse.jdt.core.dom.*;
 import um.ico.ingenierie.Analysis.Models.SourceCode.*;
-import um.ico.ingenierie.Analysis.Models.graph.Edge;
-import um.ico.ingenierie.Analysis.Models.graph.EdgeType;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.EdgeType;
 import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
-import um.ico.ingenierie.Common.utils.MySignature;
+import um.ico.ingenierie.Common.utils.IcoUtils;
 
 import java.util.*;
 
@@ -63,7 +63,7 @@ public class JdtVisitor extends ASTVisitor {
             IMethodBinding constructorBinding = node.resolveConstructorBinding();
             if (constructorBinding != null) {
                 // On utilise notre méthode createMethodSignature pour obtenir la signature du constructeur
-                String calleeSignature = MySignature.createMethodSignature(constructorBinding);
+                String calleeSignature = IcoUtils.createMethodSignature(constructorBinding);
 
                 // On ajoute une arête de la méthode courante vers le constructeur appelé
                 //TODO REFAIRE CALLGRAPH
@@ -85,7 +85,7 @@ public class JdtVisitor extends ASTVisitor {
             localClass.addMethod(new AbstractSourceMethods(localClass,node.isConstructor(),node.getName().toString(),node.parameters(),node.getReturnType2(),numberOfLines));
             IMethodBinding binding = node.resolveBinding();
             if (binding != null){
-                this.currentMethodSignature = MySignature.createMethodSignature(binding) ;
+                this.currentMethodSignature = IcoUtils.createMethodSignature(binding) ;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -102,7 +102,7 @@ public class JdtVisitor extends ASTVisitor {
         if (currentMethodSignature != null){
             IMethodBinding calledMethodBinding = node.resolveMethodBinding();
             if (calledMethodBinding != null){
-                String calleeSignature = MySignature.createMethodSignature(calledMethodBinding);
+                String calleeSignature = IcoUtils.createMethodSignature(calledMethodBinding);
                 localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.CALL));
             }
         }
@@ -118,7 +118,7 @@ public class JdtVisitor extends ASTVisitor {
             if (node.getExpression() instanceof ClassInstanceCreation newException) {
                 IMethodBinding constructorBinding = newException.resolveConstructorBinding();
                 if (constructorBinding != null) {
-                    String calleeSignature = MySignature.createMethodSignature(constructorBinding);
+                    String calleeSignature = IcoUtils.createMethodSignature(constructorBinding);
                     // TODO
                     //  callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.THROWS);
                     localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.THROWS));

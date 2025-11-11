@@ -1,8 +1,7 @@
 package um.ico.ingenierie.Api.DTO;
 
-import um.ico.ingenierie.Analysis.Models.MetricsData;
-import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
-import um.ico.ingenierie.Analysis.Models.graph.Edge;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
 
 import java.util.Map;
 import java.util.Set;

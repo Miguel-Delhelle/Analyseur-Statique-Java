@@ -2,12 +2,12 @@ package um.ico.ingenierie.Common.utils;
 
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
-import um.ico.ingenierie.Analysis.Models.graph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-public final class MySignature {
+public final class IcoUtils {
 
     public static String createMethodSignature(IMethodBinding binding) {
         if (binding == null) return "unknown.binding";
@@ -87,6 +87,18 @@ public final class MySignature {
 
         // On a trouvé le préfixe commun le plus long, qui est notre package de base.
         return longestCommonPrefix;
+    }
+
+    public static String signatureToQualifiedClassName(String signature) {
+        if (signature == null || signature.isEmpty()) {
+            return "";
+        }
+        int hashIndex = signature.indexOf('#');
+        if (hashIndex == -1) {
+            // Pas de '#', on suppose que c'est déjà un nom de classe ou invalide
+            return signature;
+        }
+        return signature.substring(0, hashIndex);
     }
 
 }

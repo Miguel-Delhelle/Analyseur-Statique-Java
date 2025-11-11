@@ -1,7 +1,7 @@
 package um.ico.ingenierie.Analysis.Result;
 
 import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
-import um.ico.ingenierie.Analysis.Models.graph.Edge;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
 
 import java.util.HashMap;
 import java.util.Map;
