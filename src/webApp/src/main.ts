@@ -15,16 +15,6 @@ interface MetricsDto {
     [key: string]: number;
 }
 
-interface GraphNode {
-    id: string;
-    label?: string;
-}
-
-interface GraphEdge {
-    source: string;
-    target: string;
-    weight?: number;
-}
 
 interface GraphDTO {
     adjacencyList: { [key: string]: Array<{calleeSignature: string, type: string}> };
@@ -45,6 +35,7 @@ interface AnalysisResponse {
     metricsDto: MetricsDto;
     graphDTO: GraphDTO;
     treeCoupling: TreeCoupling;
+    basePackage: string;
 }
 
 class AnalyzerApp {
@@ -57,6 +48,12 @@ class AnalyzerApp {
     private metricsSummary!: HTMLElement;
     private callGraph!: HTMLElement;
     private couplingGraph!: HTMLElement;
+    private callGraphFilterBtn!: HTMLButtonElement;
+    private couplingGraphFilterBtn!: HTMLButtonElement;
+    private basePackage: string = '';
+    private callGraphFilterActive: boolean = false;
+    private couplingGraphFilterActive: boolean = false;
+    private currentAnalysisData: AnalysisResponse | null = null;
 
 
     constructor() {
@@ -74,6 +71,8 @@ class AnalyzerApp {
         this.metricsSummary = document.getElementById('metrics-summary') as HTMLElement;
         this.callGraph = document.getElementById('call-graph') as HTMLElement;
         this.couplingGraph = document.getElementById('coupling-graph') as HTMLElement;
+        this.callGraphFilterBtn = document.getElementById('call-graph-filter') as HTMLButtonElement;
+        this.couplingGraphFilterBtn = document.getElementById('coupling-graph-filter') as HTMLButtonElement;
     }
 
     private bindEvents(): void {
@@ -81,6 +80,8 @@ class AnalyzerApp {
         this.gitUriInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.analyzeProject();
         });
+        this.callGraphFilterBtn?.addEventListener('click', () => this.toggleCallGraphFilter());
+        this.couplingGraphFilterBtn?.addEventListener('click', () => this.toggleCouplingGraphFilter());
     }
 
     private showLoader(): void {
@@ -127,8 +128,11 @@ class AnalyzerApp {
             }
 
             const data: AnalysisResponse = await response.json();
+            this.currentAnalysisData = data;
+            this.basePackage = data.basePackage || '';
             this.displayResults(data);
             this.showResults();
+            this.updateFilterButtons();
         } catch (error) {
             this.showError(`Erreur lors de l'analyse: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
         } finally {
@@ -184,10 +188,19 @@ class AnalyzerApp {
                         'background-color': '#3498db',
                         'label': 'data(label)',
                         'text-valign': 'center',
-                        'color': '#fff',
-                        'font-size': '12px',
-                        'width': '60px',
-                        'height': '60px'
+                        'text-halign': 'center',
+                        'color': '#2c3e50',
+                        'font-size': '14px',
+                        'font-weight': 'bold',
+                        'text-outline-width': 2,
+                        'text-outline-color': '#fff',
+                        'text-outline-opacity': 0.8,
+                        'width': '80px',
+                        'height': '80px',
+                        'border-width': 2,
+                        'border-color': '#2980b9',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '70px'
                     }
                 },
                 {
@@ -221,30 +234,46 @@ class AnalyzerApp {
                 {
                     selector: 'node',
                     style: {
-                        'background-color': '#e74c3c',
+                        'background-color': (ele: any) => {
+                            const coupling = ele.data('coupling') || 0;
+                            const intensity = Math.min(coupling, 1);
+                            return `rgb(${Math.round(52 + (231 - 52) * intensity)}, ${Math.round(152 + (76 - 152) * intensity)}, ${Math.round(219 + (60 - 219) * intensity)})`;
+                        },
                         'label': 'data(label)',
                         'text-valign': 'center',
-                        'color': '#fff',
+                        'text-halign': 'center',
+                        'color': '#2c3e50',
                         'font-size': '12px',
-                        'width': (ele: any) => Math.max(40, Math.min(100, (ele.data('coupling') || 1) * 10)),
-                        'height': (ele: any) => Math.max(40, Math.min(100, (ele.data('coupling') || 1) * 10))
+                        'font-weight': 'bold',
+                        'text-outline-width': 2,
+                        'text-outline-color': '#fff',
+                        'text-outline-opacity': 0.9,
+                        'width': '80px',
+                        'height': '80px',
+                        'border-width': 3,
+                        'border-color': '#c0392b',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '70px'
                     }
                 },
                 {
                     selector: 'edge',
                     style: {
-                        'width': (ele: any) => Math.max(2, Math.min(10, (ele.data('coupling') || 1) * 2)),
+                        'width': (ele: any) => Math.max(3, Math.min(15, (ele.data('coupling') || 0) * 50)),
+                        'label': 'data(label)',
+                        'font-size': '10px',
+                        'color': '#2c3e50',
+                        'text-background-color': '#fff',
+                        'text-background-opacity': 0.8,
+                        'text-background-padding': '2px',
+                        'text-border-width': 1,
+                        'text-border-color': '#ccc',
+                        'text-border-opacity': 0.8,
                         'line-color': (ele: any) => {
                             const coupling = ele.data('coupling') || 0;
                             const intensity = Math.min(coupling / 10, 1);
                             return `rgb(${Math.round(149 + (231 - 149) * intensity)}, ${Math.round(165 + (76 - 165) * intensity)}, ${Math.round(166 + (60 - 166) * intensity)})`;
                         },
-                        'target-arrow-color': (ele: any) => {
-                            const coupling = ele.data('coupling') || 0;
-                            const intensity = Math.min(coupling / 10, 1);
-                            return `rgb(${Math.round(149 + (231 - 149) * intensity)}, ${Math.round(165 + (76 - 165) * intensity)}, ${Math.round(166 + (60 - 166) * intensity)})`;
-                        },
-                        'target-arrow-shape': 'triangle',
                         'curve-style': 'bezier',
                         'opacity': (ele: any) => Math.max(0.5, Math.min(1, 0.5 + (ele.data('coupling') || 0) / 20))
                     }
@@ -262,12 +291,16 @@ class AnalyzerApp {
         const elements: any[] = [];
         const nodes = new Set<string>();
 
-        // Collecter tous les nœuds
+        // Collecter tous les nœuds avec filtrage
         Object.keys(adjacencyList).forEach(source => {
-            nodes.add(source);
+            if (this.shouldIncludeInCallGraph(source)) {
+                nodes.add(source);
+            }
             adjacencyList[source].forEach(edge => {
-                if (edge.calleeSignature) {
-                    nodes.add(edge.calleeSignature);
+                if (edge.calleeSignature && this.shouldIncludeInCallGraph(edge.calleeSignature)) {
+                    if (this.shouldIncludeInCallGraph(source)) {
+                        nodes.add(edge.calleeSignature);
+                    }
                 }
             });
         });
@@ -284,20 +317,22 @@ class AnalyzerApp {
             });
         });
 
-        // Ajouter les arêtes
+        // Ajouter les arêtes avec filtrage
         Object.entries(adjacencyList).forEach(([source, edges]) => {
-            edges.forEach(edge => {
-                if (edge.calleeSignature) {
-                    elements.push({
-                        data: { 
-                            id: `${source}-${edge.calleeSignature}`,
-                            source: source,
-                            target: edge.calleeSignature,
-                            type: edge.type
-                        }
-                    });
-                }
-            });
+            if (this.shouldIncludeInCallGraph(source)) {
+                edges.forEach(edge => {
+                    if (edge.calleeSignature && this.shouldIncludeInCallGraph(edge.calleeSignature)) {
+                        elements.push({
+                            data: { 
+                                id: `${source}-${edge.calleeSignature}`,
+                                source: source,
+                                target: edge.calleeSignature,
+                                type: edge.type
+                            }
+                        });
+                    }
+                });
+            }
         });
 
         return elements;
@@ -323,10 +358,14 @@ class AnalyzerApp {
         const elements: any[] = [];
         const nodes = new Set<string>();
 
-        // Collecter tous les nœuds
+        // Collecter tous les nœuds avec filtrage
         couplingEdges.forEach(edge => {
-            nodes.add(edge.classA);
-            nodes.add(edge.classB);
+            if (this.shouldIncludeInCouplingGraph(edge.classA)) {
+                nodes.add(edge.classA);
+            }
+            if (this.shouldIncludeInCouplingGraph(edge.classB)) {
+                nodes.add(edge.classB);
+            }
         });
 
         // Ajouter les nœuds avec couplage
@@ -336,6 +375,7 @@ class AnalyzerApp {
                 .reduce((sum, e) => sum + e.coupling, 0);
             
             const simplifiedLabel = this.simplifyClassName(node);
+            
             elements.push({
                 data: { 
                     id: node, 
@@ -346,17 +386,27 @@ class AnalyzerApp {
             });
         });
 
-        // Ajouter les arêtes
+        // Ajouter les arêtes bidirectionnelles (éviter les doublons)
+        const processedPairs = new Set<string>();
         couplingEdges.forEach(edge => {
-            elements.push({
-                data: {
-                    id: `${edge.classA}-${edge.classB}`,
-                    source: edge.classA,
-                    target: edge.classB,
-                    coupling: edge.coupling,
-                    nbrOfLink: edge.nbrOfLink
+            // Ne garder que les arêtes où les deux classes passent le filtre
+            if (this.shouldIncludeInCouplingGraph(edge.classA) && this.shouldIncludeInCouplingGraph(edge.classB)) {
+                const pairKey = [edge.classA, edge.classB].sort().join('-');
+                if (!processedPairs.has(pairKey)) {
+                    processedPairs.add(pairKey);
+                    const couplingPercentage = Math.round(edge.coupling * 100);
+                    elements.push({
+                        data: {
+                            id: `${edge.classA}-${edge.classB}`,
+                            source: edge.classA,
+                            target: edge.classB,
+                            coupling: edge.coupling,
+                            nbrOfLink: edge.nbrOfLink,
+                            label: `${couplingPercentage}%`
+                        }
+                    });
                 }
-            });
+            }
         });
 
         return elements;
@@ -366,6 +416,51 @@ class AnalyzerApp {
         // Extraire juste le nom de la classe sans le package complet
         const parts = className.split('.');
         return parts[parts.length - 1] || className;
+    }
+
+    private toggleCallGraphFilter(): void {
+        this.callGraphFilterActive = !this.callGraphFilterActive;
+        this.updateFilterButtons();
+        if (this.currentAnalysisData) {
+            this.displayCallGraph(this.currentAnalysisData.graphDTO);
+        }
+    }
+
+    private toggleCouplingGraphFilter(): void {
+        this.couplingGraphFilterActive = !this.couplingGraphFilterActive;
+        this.updateFilterButtons();
+        if (this.currentAnalysisData) {
+            this.displayCouplingGraph(this.currentAnalysisData.treeCoupling);
+        }
+    }
+
+    private updateFilterButtons(): void {
+        if (this.callGraphFilterBtn) {
+            this.callGraphFilterBtn.classList.toggle('active', this.callGraphFilterActive);
+            this.callGraphFilterBtn.textContent = this.callGraphFilterActive 
+                ? `Afficher tout (actuellement: ${this.basePackage}*)` 
+                : 'Filtrer par package de base';
+        }
+        if (this.couplingGraphFilterBtn) {
+            this.couplingGraphFilterBtn.classList.toggle('active', this.couplingGraphFilterActive);
+            this.couplingGraphFilterBtn.textContent = this.couplingGraphFilterActive 
+                ? `Afficher tout (actuellement: ${this.basePackage}*)` 
+                : 'Filtrer par package de base';
+        }
+    }
+
+    private shouldIncludeInCallGraph(signature: string): boolean {
+        if (!this.callGraphFilterActive || !this.basePackage) {
+            return true;
+        }
+        return signature.startsWith(this.basePackage);
+    }
+
+    private shouldIncludeInCouplingGraph(className: string): boolean {
+        if (!this.couplingGraphFilterActive || !this.basePackage) {
+            return true;
+        }
+        return className.startsWith(this.basePackage);
     }
 }
 
