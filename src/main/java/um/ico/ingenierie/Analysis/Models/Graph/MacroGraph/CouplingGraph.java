@@ -8,15 +8,15 @@ import um.ico.ingenierie.Common.utils.IcoUtils;
 
 import java.util.*;
 
-public class CouplingService {
+public class CouplingGraph {
 
-    private static final Logger log = LoggerFactory.getLogger(CouplingService.class);
+    private static final Logger log = LoggerFactory.getLogger(CouplingGraph.class);
 
-    private CouplingService(){
+    private CouplingGraph(){
 
     }
 
-    public static Map<String,PaireClass> TreeCoupling(CallGraph callGraph) {
+    public static List<PaireClass> TreeCoupling(CallGraph callGraph) {
 
         //Variables d'entrée
         String basePackage = IcoUtils.determineBasePackage(callGraph);
@@ -73,7 +73,8 @@ public class CouplingService {
             //System.out.println(nbrLienDeToutesLesClasses);
             unePaireDeClass.setCouplage(nbrLienEntreToutesLesClasses);
         }
-        return lienEntrePairs;
+
+        return lienEntrePairs.values().stream().toList();
     }
 
 }

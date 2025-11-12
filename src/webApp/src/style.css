@@ -1,251 +1,233 @@
-/* --- Variables et Thème Global --- */
-:root {
-  --background-color: #1a1a1a;
-  --surface-color: #242424;
-  --primary-color: #646cff;
-  --primary-hover-color: #747bff;
-  --text-color: rgba(255, 255, 255, 0.87);
-  --text-muted-color: rgba(255, 255, 255, 0.6);
-  --border-color: #444;
-  --success-color: #28a745;
-  --success-hover-color: #218838;
-  --border-radius: 8px;
-  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+/* File: src/style.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* --- Réinitialisation et Police --- */
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--background-color);
-  color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
 }
 
-/* --- Layout Principal --- */
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
 header h1 {
-  text-align: center;
-  font-size: 2.5em;
-  font-weight: 300;
-  letter-spacing: 1px;
-  color: var(--primary-color);
-  margin: 1em 0;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    font-weight: 300;
+}
+
+.input-section {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+#gitUri {
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    min-width: 300px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#analyzeBtn {
+    padding: 0.75rem 2rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#analyzeBtn:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+#analyzeBtn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background: white;
+    margin: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    margin: 2rem;
+    border-radius: 8px;
+    border: 1px solid #f5c6cb;
+    text-align: center;
+}
+
+.hidden {
+    display: none !important;
 }
 
 main {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 2em 3em;
+    flex: 1;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
 }
 
-/* --- Sections "Carte" --- */
-.analysis-option, #results {
-  background-color: var(--surface-color);
-  padding: 2em;
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
-  border: 1px solid var(--border-color);
-  margin-bottom: 2em;
-}
-
-/* --- Section des Contrôles --- */
-#controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 2em;
-}
-
-.analysis-option h2 {
-  margin: 0 0 0.5em 0;
-  font-weight: 500;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5em;
-}
-
-input[type="text"], input[type="file"] {
-  width: 100%;
-  padding: 0.75em;
-  margin-bottom: 1em;
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  color: var(--text-color);
-  box-sizing: border-box;
-}
-
-button, a#downloadBtn {
-  cursor: pointer;
-  padding: 0.75em 1.5em;
-  border: none;
-  background-color: var(--primary-color);
-  color: white;
-  font-weight: bold;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-  text-decoration: none;
-  align-self: flex-start;
-}
-
-button:hover, a#downloadBtn:hover {
-  background-color: var(--primary-hover-color);
-}
-
-/* --- Section des Résultats --- */
-#loader {
-  text-align: center;
-  padding: 2em;
-  font-size: 1.2em;
-  color: var(--text-muted-color);
-}
-
-#results h3 {
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5em;
-  margin: 2em 0 1em;
-}
-#results h3:first-of-type {
-    margin-top: 0;
-}
-
-/* Tableau des métriques */
-#metricsTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-#metricsTable td {
-  padding: 0.8em 1em;
-  border: 1px solid var(--border-color);
-}
-
-#metricsTable tr:nth-child(even) {
-  background-color: rgba(0, 0, 0, 0.2);
-}
-
-#metricsTable td:first-child {
-  font-weight: bold;
-  color: var(--primary-color);
-  width: 30%;
-}
-
-/* Graphe Interactif */
-#view-selector {
-    display: flex;
-    background-color: var(--background-color);
-    border-radius: var(--border-radius);
+section {
+    background: white;
+    margin-bottom: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    border: 1px solid var(--border-color);
-    margin-bottom: 1.5em;
-}
-.view-btn {
-    flex-grow: 1;
-    background-color: transparent;
-    border: none;
-    padding: 0.75em;
-    color: var(--text-muted-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 1em;
-}
-.view-btn:not(:last-child) { border-right: 1px solid var(--border-color); }
-.view-btn.active { background-color: var(--primary-color); color: white; font-weight: bold; }
-.view-btn:hover:not(.active) { background-color: rgba(255,255,255,0.1); }
-
-
-#graph-controls {
-  display: flex;
-  gap: 1.5em;
-  margin-bottom: 1em;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 1em;
-  background-color: var(--background-color);
-  border-radius: var(--border-radius);
 }
 
-#graph-controls label {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-  cursor: pointer;
+section h2 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 400;
 }
 
-.control-separator {
-    margin-left: 1em;
-    border-left: 2px solid var(--border-color);
-    padding-left: 1.5em;
+#metrics-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 2rem;
 }
 
-#graphContainer {
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  position: relative;
-  background-color: #202124;
-  min-height: 600px;
-  width: 100%;
-  box-sizing: border-box;
+.metric-card {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s;
 }
 
-.graph-actions {
-    margin-top: 1em;
-    display: flex;
-    gap: 1em;
+.metric-card:hover {
+    transform: translateY(-2px);
 }
 
-#downloadBtn {
-    background-color: var(--success-color);
-}
-#downloadBtn:hover {
-    background-color: var(--success-hover-color);
-}
-
-#fullscreen-btn {
-    background-color: #333;
-    border: 1px solid var(--border-color);
-}
-#fullscreen-btn:hover {
-    background-color: #444;
+.metric-card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
 }
 
-/* --- Styles spécifiques au graphe SVG --- */
-.arrow-marker {
-  fill: #999;
+.metric-value {
+    font-size: 2rem;
+    font-weight: bold;
 }
 
-.group-box {
-  stroke-width: 2px;
-  stroke-opacity: 0.8;
-  fill-opacity: 0.1;
-  rx: 15px;
+.summary {
+    padding: 1.5rem 2rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
 }
 
-.node-label {
-  font-size: 11px;
-  font-family: sans-serif;
-  pointer-events: none;
-  fill: var(--text-muted-color);
-  stroke: #202124;
-  stroke-width: 3px;
-  paint-order: stroke;
+#call-graph, #coupling-graph {
+    height: 500px;
+    width: 100%;
+    background-color: #fafafa;
+    border-top: 1px solid #dee2e6;
 }
 
-/* --- Style pour le mode Plein Écran --- */
-#graphContainer.fullscreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 9999;
-  border: none;
-  border-radius: 0;
+@media (max-width: 768px) {
+    header {
+        padding: 1rem;
+    }
+
+    header h1 {
+        font-size: 2rem;
+    }
+
+    .input-section {
+        flex-direction: column;
+    }
+
+    #gitUri {
+        min-width: 250px;
+        width: 100%;
+    }
+
+    main {
+        padding: 1rem;
+    }
+
+    #metrics-cards {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    #call-graph, #coupling-graph {
+        height: 400px;
+    }
 }
 
-/* Classe utilitaire */
-.hidden {
-  display: none !important;
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    #gitUri {
+        min-width: 200px;
+    }
+
+    .metric-card {
+        padding: 1rem;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+    }
 }

@@ -9,12 +9,15 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/cytoscape": "^3.21.9",
     "@types/d3": "^7.4.3",
     "typescript": "~5.9.3",
     "vite": "^7.1.7"
   },
   "dependencies": {
     "@hpcc-js/wasm": "^2.26.3",
+    "chart.js": "^4.5.1",
+    "cytoscape": "^3.33.1",
     "d3": "^7.9.0"
   }
 }
