@@ -1,7 +1,7 @@
 package um.ico.ingenierie.Api.DTO;
 
-import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.CouplingGraph;
-import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.PaireClass;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
 import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
 
 import java.util.ArrayList;

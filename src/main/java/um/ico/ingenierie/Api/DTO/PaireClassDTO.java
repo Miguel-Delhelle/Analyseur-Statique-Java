@@ -1,6 +1,6 @@
 package um.ico.ingenierie.Api.DTO;
 
-import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.PaireClass;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
 
 public record PaireClassDTO(String classA, String classB, int nbrOfLink, double coupling) {
 

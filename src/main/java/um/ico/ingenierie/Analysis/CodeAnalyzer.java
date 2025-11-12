@@ -34,34 +34,34 @@ public class CodeAnalyzer {
 
     private static final Logger log = LoggerFactory.getLogger(CodeAnalyzer.class);
 
-    private IJavaFilesHandler javaFilesHandlerPath;
+    private IJavaFilesHandler filesHandler;
 
     public CodeAnalyzer() {
 
     }
 
     public CodeAnalyzer(String path) throws IOException {
-        this.javaFilesHandlerPath = new JavaFilesHandlerPath(path);
+        this.filesHandler = new JavaFilesHandlerPath(path);
     }
 
     public CodeAnalyzer(IJavaFilesHandler javaFilesHandler) throws IOException {
-        this.javaFilesHandlerPath = javaFilesHandler;
+        this.filesHandler = javaFilesHandler;
     }
 
     public AnalysisResponse analyze() {
 
-        log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.javaFilesHandlerPath.getRootPath());
-        log.debug("Nombre de fichiers .java trouvés : {}", this.javaFilesHandlerPath.getAllPathJava().size());
+        log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.filesHandler.getRootPath());
+        log.debug("Nombre de fichiers .java trouvés : {}", this.filesHandler.getAllPathJava().size());
 
         String[] classPath = System.getProperty("java.class.path").split(File.pathSeparator);
-        String[] sources = {this.getJavaFilesHandler().getRootPath().toString()};
+        String[] sources = {this.getFilesHandler().getRootPath().toString()};
 
         log.info("Classpath utilisé : " + Arrays.toString(classPath));
         log.info("Sourcepath utilisé : " + Arrays.toString(sources));
         MetricsData metricsData = new MetricsData();
         CallGraph callGraph = new CallGraph();
 
-        for (Path filePath : this.javaFilesHandlerPath.getAllPathJava()){
+        for (Path filePath : this.filesHandler.getAllPathJava()){
             try{
                 CompilationUnit cu = initCu(classPath,sources,filePath);
                 JdtVisitor visitor = new JdtVisitor(cu);
@@ -69,7 +69,7 @@ public class CodeAnalyzer {
 
                 SingleFileAnalysisResult singleFileAnalysisResult = visitor.getResult();
 
-                log.info("Analyse terminée.");
+                log.info("Analyse du fichier "+filePath.toString()+"terminée.");
 
                 metricsData.addClass(singleFileAnalysisResult.getFoundClass());
                 callGraph.addEdges(singleFileAnalysisResult.getFoundEdges());
@@ -99,17 +99,9 @@ public class CodeAnalyzer {
         }
         return cu;
     }
-//
-//    public MetricsData getMetricsData() {
-//        return metricsData;
-//    }
-//
-//    public CallGraph getCallGraph(){
-//        return this.callGraph;
-//    }
 
-    protected IJavaFilesHandler getJavaFilesHandler() {
-        return javaFilesHandlerPath;
+    protected IJavaFilesHandler getFilesHandler() {
+        return filesHandler;
     }
 }
 

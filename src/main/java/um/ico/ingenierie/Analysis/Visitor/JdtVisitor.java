@@ -9,7 +9,7 @@ import um.ico.ingenierie.Common.utils.IcoUtils;
 
 import java.util.*;
 
-public class JdtVisitor extends ASTVisitor {
+public class JdtVisitor extends ASTVisitor implements IVisitor{
 
     private String currentMethodSignature = null;
 
@@ -17,13 +17,9 @@ public class JdtVisitor extends ASTVisitor {
     private AbstractSourceClass localClass = new AbstractSourceClass();
     private Map<String, Set<Edge>> localEdge = new HashMap<>();
     private CompilationUnit cu;
-    //private MetricsData metricsData;
-    //private CallGraph callGraph;
 
     public JdtVisitor(CompilationUnit cu) {
-        //this.metricsData = metricsData;
         this.cu = cu;
-        //this.callGraph = callGraph;
     }
 
     @Override

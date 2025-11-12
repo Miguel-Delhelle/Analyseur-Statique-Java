@@ -50,10 +50,17 @@ class AnalyzerApp {
     private couplingGraph!: HTMLElement;
     private callGraphFilterBtn!: HTMLButtonElement;
     private couplingGraphFilterBtn!: HTMLButtonElement;
+    private callGraphFullscreenBtn!: HTMLButtonElement;
+    private couplingGraphFullscreenBtn!: HTMLButtonElement;
+    private fullscreenModal!: HTMLElement;
+    private fullscreenGraph!: HTMLElement;
+    private fullscreenTitle!: HTMLElement;
+    private fullscreenCloseBtn!: HTMLButtonElement;
     private basePackage: string = '';
     private callGraphFilterActive: boolean = false;
     private couplingGraphFilterActive: boolean = false;
     private currentAnalysisData: AnalysisResponse | null = null;
+    private currentFullscreenGraph: 'call' | 'coupling' | null = null;
 
 
     constructor() {
@@ -73,6 +80,12 @@ class AnalyzerApp {
         this.couplingGraph = document.getElementById('coupling-graph') as HTMLElement;
         this.callGraphFilterBtn = document.getElementById('call-graph-filter') as HTMLButtonElement;
         this.couplingGraphFilterBtn = document.getElementById('coupling-graph-filter') as HTMLButtonElement;
+        this.callGraphFullscreenBtn = document.getElementById('call-graph-fullscreen') as HTMLButtonElement;
+        this.couplingGraphFullscreenBtn = document.getElementById('coupling-graph-fullscreen') as HTMLButtonElement;
+        this.fullscreenModal = document.getElementById('fullscreen-modal') as HTMLElement;
+        this.fullscreenGraph = document.getElementById('fullscreen-graph') as HTMLElement;
+        this.fullscreenTitle = document.getElementById('fullscreen-title') as HTMLElement;
+        this.fullscreenCloseBtn = document.getElementById('fullscreen-close') as HTMLButtonElement;
     }
 
     private bindEvents(): void {
@@ -82,6 +95,23 @@ class AnalyzerApp {
         });
         this.callGraphFilterBtn?.addEventListener('click', () => this.toggleCallGraphFilter());
         this.couplingGraphFilterBtn?.addEventListener('click', () => this.toggleCouplingGraphFilter());
+        this.callGraphFullscreenBtn?.addEventListener('click', () => this.openFullscreen('call'));
+        this.couplingGraphFullscreenBtn?.addEventListener('click', () => this.openFullscreen('coupling'));
+        this.fullscreenCloseBtn?.addEventListener('click', () => this.closeFullscreen());
+        
+        // Fermer le modal en cliquant sur l'arrière-plan
+        this.fullscreenModal?.addEventListener('click', (e) => {
+            if (e.target === this.fullscreenModal) {
+                this.closeFullscreen();
+            }
+        });
+        
+        // Fermer avec la touche Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.currentFullscreenGraph) {
+                this.closeFullscreen();
+            }
+        });
     }
 
     private showLoader(): void {
@@ -217,7 +247,17 @@ class AnalyzerApp {
             layout: {
                 name: 'cose',
                 animate: true,
-                animationDuration: 1000
+                animationDuration: 1000,
+                nodeRepulsion: 10000,
+                nodeOverlap: 20,
+                idealEdgeLength: 120,
+                edgeElasticity: 200,
+                nestingFactor: 5,
+                gravity: 80,
+                numIter: 1000,
+                initialTemp: 200,
+                coolingFactor: 0.95,
+                minTemp: 1.0
             }
         });
     }
@@ -282,7 +322,17 @@ class AnalyzerApp {
             layout: {
                 name: 'cose',
                 animate: true,
-                animationDuration: 1000
+                animationDuration: 1000,
+                nodeRepulsion: 8000,
+                nodeOverlap: 20,
+                idealEdgeLength: 100,
+                edgeElasticity: 200,
+                nestingFactor: 5,
+                gravity: 80,
+                numIter: 1000,
+                initialTemp: 200,
+                coolingFactor: 0.95,
+                minTemp: 1.0
             }
         });
     }
@@ -461,6 +511,163 @@ class AnalyzerApp {
             return true;
         }
         return className.startsWith(this.basePackage);
+    }
+
+    private openFullscreen(graphType: 'call' | 'coupling'): void {
+        this.currentFullscreenGraph = graphType;
+        this.fullscreenModal.classList.remove('hidden');
+        
+        if (graphType === 'call') {
+            this.fullscreenTitle.textContent = 'Graphe d\'Appels - Plein Écran';
+            if (this.currentAnalysisData) {
+                this.displayCallGraphInContainer(this.currentAnalysisData.graphDTO, this.fullscreenGraph);
+            }
+        } else {
+            this.fullscreenTitle.textContent = 'Graphe de Couplage - Plein Écran';
+            if (this.currentAnalysisData) {
+                this.displayCouplingGraphInContainer(this.currentAnalysisData.treeCoupling, this.fullscreenGraph);
+            }
+        }
+    }
+
+    private closeFullscreen(): void {
+        this.fullscreenModal.classList.add('hidden');
+        this.currentFullscreenGraph = null;
+        this.fullscreenGraph.innerHTML = '';
+    }
+
+    private displayCallGraphInContainer(graphData: GraphDTO, container: HTMLElement): void {
+        container.innerHTML = '';
+        
+        const elements = this.convertAdjacencyListToCytoscape(graphData.adjacencyList);
+        
+        cytoscape({
+            container: container,
+            elements: elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#3498db',
+                        'label': 'data(label)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'color': '#2c3e50',
+                        'font-size': '14px',
+                        'font-weight': 'bold',
+                        'text-outline-width': 2,
+                        'text-outline-color': '#fff',
+                        'text-outline-opacity': 0.8,
+                        'width': '80px',
+                        'height': '80px',
+                        'border-width': 2,
+                        'border-color': '#2980b9',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '70px'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 2,
+                        'line-color': '#95a5a6',
+                        'target-arrow-color': '#95a5a6',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier'
+                    }
+                }
+            ],
+            layout: {
+                name: 'cose',
+                animate: true,
+                animationDuration: 1500,
+                nodeRepulsion: 12000,
+                nodeOverlap: 30,
+                idealEdgeLength: 150,
+                edgeElasticity: 200,
+                nestingFactor: 5,
+                gravity: 60,
+                numIter: 1200,
+                initialTemp: 300,
+                coolingFactor: 0.95,
+                minTemp: 1.0
+            }
+        });
+    }
+
+    private displayCouplingGraphInContainer(couplingData: TreeCoupling, container: HTMLElement): void {
+        container.innerHTML = '';
+            
+        const elements = this.convertCouplingToCytoscape(couplingData.graphCoupling);
+        
+        cytoscape({
+            container: container,
+            elements: elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': (ele: any) => {
+                            const coupling = ele.data('coupling') || 0;
+                            const intensity = Math.min(coupling, 1);
+                            return `rgb(${Math.round(52 + (231 - 52) * intensity)}, ${Math.round(152 + (76 - 152) * intensity)}, ${Math.round(219 + (60 - 219) * intensity)})`;
+                        },
+                        'label': 'data(label)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'color': '#2c3e50',
+                        'font-size': '12px',
+                        'font-weight': 'bold',
+                        'text-outline-width': 2,
+                        'text-outline-color': '#fff',
+                        'text-outline-opacity': 0.9,
+                        'width': '80px',
+                        'height': '80px',
+                        'border-width': 3,
+                        'border-color': '#c0392b',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '70px'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': (ele: any) => Math.max(3, Math.min(15, (ele.data('coupling') || 0) * 50)),
+                        'label': 'data(label)',
+                        'font-size': '10px',
+                        'color': '#2c3e50',
+                        'text-background-color': '#fff',
+                        'text-background-opacity': 0.8,
+                        'text-background-padding': '2px',
+                        'text-border-width': 1,
+                        'text-border-color': '#ccc',
+                        'text-border-opacity': 0.8,
+                        'line-color': (ele: any) => {
+                            const coupling = ele.data('coupling') || 0;
+                            const intensity = Math.min(coupling / 10, 1);
+                            return `rgb(${Math.round(149 + (231 - 149) * intensity)}, ${Math.round(165 + (76 - 165) * intensity)}, ${Math.round(166 + (60 - 166) * intensity)})`;
+                        },
+                        'curve-style': 'bezier',
+                        'opacity': (ele: any) => Math.max(0.5, Math.min(1, 0.5 + (ele.data('coupling') || 0) / 20))
+                    }
+                }
+            ],
+            layout: {
+                name: 'cose',
+                animate: true,
+                animationDuration: 1500,
+                nodeRepulsion: 15000,
+                nodeOverlap: 30,
+                idealEdgeLength: 180,
+                edgeElasticity: 200,
+                nestingFactor: 5,
+                gravity: 60,
+                numIter: 1200,
+                initialTemp: 300,
+                coolingFactor: 0.95,
+                minTemp: 1.0
+            }
+        });
     }
 }
 

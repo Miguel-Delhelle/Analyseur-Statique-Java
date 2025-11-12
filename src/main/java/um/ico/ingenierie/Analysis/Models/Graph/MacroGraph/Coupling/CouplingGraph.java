@@ -1,4 +1,4 @@
-package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph;
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,9 +42,9 @@ public class CouplingGraph {
             for (Edge arrete: arretes){
 
                 String classFemelle = IcoUtils.signatureToQualifiedClassName(arrete.getCalleeSignature());
-                if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
-                    continue;
-                }
+//                if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
+//                    continue;
+//                }
 
                 if (!classFemelle.equals(classMale)){
                     nbrDeLienSortantDeLaClasse++;

@@ -1,4 +1,4 @@
-package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph;
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

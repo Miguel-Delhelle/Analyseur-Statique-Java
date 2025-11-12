@@ -1,4 +1,12 @@
 package um.ico.ingenierie.Analysis.Visitor;
 
-public class SpoonVisitor {
+import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
+
+public class SpoonVisitor implements IVisitor {
+
+    //TODO
+    @Override
+    public SingleFileAnalysisResult getResult() {
+        return null;
+    }
 }

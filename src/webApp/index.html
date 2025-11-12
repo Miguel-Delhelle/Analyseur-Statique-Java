@@ -35,7 +35,10 @@
             <section id="call-graph-section">
                 <div class="section-header">
                     <h2>Graphe d'Appels</h2>
-                    <button id="call-graph-filter" class="filter-btn">Filtrer par package de base</button>
+                    <div class="button-group">
+                        <button id="call-graph-filter" class="filter-btn">Filtrer par package de base</button>
+                        <button id="call-graph-fullscreen" class="fullscreen-btn">⛶ Plein écran</button>
+                    </div>
                 </div>
                 <div id="call-graph"></div>
             </section>
@@ -43,11 +46,23 @@
             <section id="coupling-section">
                 <div class="section-header">
                     <h2>Graphe de Couplage</h2>
-                    <button id="coupling-graph-filter" class="filter-btn">Filtrer par package de base</button>
+                    <div class="button-group">
+                        <button id="coupling-graph-filter" class="filter-btn">Filtrer par package de base</button>
+                        <button id="coupling-graph-fullscreen" class="fullscreen-btn">⛶ Plein écran</button>
+                    </div>
                 </div>
                 <div id="coupling-graph"></div>
             </section>
         </main>
+        
+        <!-- Modal plein écran pour les graphes -->
+        <div id="fullscreen-modal" class="fullscreen-modal hidden">
+            <div class="fullscreen-header">
+                <h2 id="fullscreen-title">Graphe</h2>
+                <button id="fullscreen-close" class="close-btn">✕</button>
+            </div>
+            <div id="fullscreen-graph"></div>
+        </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
 </body>
