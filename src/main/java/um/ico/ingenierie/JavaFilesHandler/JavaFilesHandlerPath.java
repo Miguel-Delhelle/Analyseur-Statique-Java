@@ -21,7 +21,9 @@ import java.util.stream.Stream;
  * @version 1.0
  */
 
-@Deprecated(since = "")
+@Deprecated(since = "Cette méthode était pensé pour une utilisation en Cli, ou en local. " +
+        "Elle est gardé à des fins de pouvoir revenir sur cette utilisation si besoin" +
+        "Cependant, elle est normalement inutilisée.")
 public class JavaFilesHandlerPath implements IJavaFilesHandler {
 
     private Path chemin = Paths.get(".");

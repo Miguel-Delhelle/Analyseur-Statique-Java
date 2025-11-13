@@ -42,6 +42,14 @@ public class CouplingGraph {
             for (Edge arrete: arretes){
 
                 String classFemelle = IcoUtils.signatureToQualifiedClassName(arrete.getCalleeSignature());
+
+                //Condition commentée, l'idée initiale était de compter que les liens interne aux programmes,
+                // Pas les méthode vers les Spring, Java.utils, etc etc
+                // J'ai pris le partie de finalement les incorporer dans le comptage, puisque je me retrouvais avec des situations étrange
+                // Ou les petites classes faisant appel une fois à une méthode interne, et 100 fois à des méthode "externes"
+                // Se retrouvait avec des couplages à 100%
+                // Ce qui est sémantiquement faux.
+
 //                if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
 //                    continue;
 //                }
@@ -56,9 +64,6 @@ public class CouplingGraph {
                     lienEntrePairs.get(currentSignatureOfCouple).addOneLink();
                 }
             }
-
-            //JUSTE CETTE CONDITION CA SERVAIT A RIEN DE FAIRE UNE USINE A GAZ
-            // ENfAITE MON CALLGRAPH N'A PAS FORCEMENT LES VALEURS DANS L'ORDRE DONC ON ECRASAIT DES PRECEDENTES CLASSE QUI EXISTAIT DEJA
             if (nbrLienEntreToutesLesClasses.containsKey(classMale)){
                 int valeurActuelle = nbrLienEntreToutesLesClasses.get(classMale);
                 nbrLienEntreToutesLesClasses.put(classMale,valeurActuelle+nbrDeLienSortantDeLaClasse);
@@ -70,11 +75,26 @@ public class CouplingGraph {
 
         // Parcours de la Map pour appliquer le taux de couplage.
         for (PaireClass unePaireDeClass: lienEntrePairs.values()){
-            //System.out.println(nbrLienDeToutesLesClasses);
             unePaireDeClass.setCouplage(nbrLienEntreToutesLesClasses);
         }
 
         return lienEntrePairs.values().stream().toList();
     }
+
+    public static List<PaireClass> triSurCouplingScore(List<PaireClass> paireClassNonTrie){
+        if (paireClassNonTrie == null || paireClassNonTrie.isEmpty()) {
+            log.warn("Aucune paire à trier.");
+            return Collections.emptyList();
+        }
+
+        List<PaireClass> listeTriee = new ArrayList<>(paireClassNonTrie);
+
+        listeTriee.sort(Comparator.comparingDouble(PaireClass::getCouplage).reversed());
+
+        log.info("Tri effectué sur le score de couplage (du plus fort au plus faible).");
+
+        return listeTriee;
+    }
+
 
 }

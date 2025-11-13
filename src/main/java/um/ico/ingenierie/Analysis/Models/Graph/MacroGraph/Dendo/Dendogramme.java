@@ -1,19 +1,22 @@
 package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendo;
 
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class Dendogramme {
 
-    private List<PaireClass> listCouplin = new ArrayList<PaireClass>();
 
-    public Dendogramme(List<PaireClass> paireClassList){
-        this.listCouplin = new ArrayList<>(paireClassList); // On fait bien une copie de la liste, on la référence pas
+    public Dendogramme(){
     }
-//
-//    public static constructDendo(List<PaireClass> listCoupling){
-//
-//    }
+
+
+    public static Set<DendoNode> constructDendo(List<PaireClass> listCoupling){
+        List<PaireClass> classListTrie = CouplingGraph.triSurCouplingScore(listCoupling);
+        DendoNode
+
+    }
 }
