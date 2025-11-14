@@ -16,11 +16,11 @@ public class CouplingGraph {
 
     }
 
-    public static List<PaireClass> TreeCoupling(CallGraph callGraph) {
+    public static List<PaireClass> CouplingGraph(CallGraph callGraph) {
 
         //Variables d'entrée
         String basePackage = IcoUtils.determineBasePackage(callGraph);
-        int totalEdges = callGraph.getNumberOfEdges();
+        //int totalEdges = callGraph.getNumberOfEdges();
         Map<String,Set<Edge>> adjacencyList = callGraph.getAdjacencyList();
 
         //Numérateur
@@ -43,16 +43,9 @@ public class CouplingGraph {
 
                 String classFemelle = IcoUtils.signatureToQualifiedClassName(arrete.getCalleeSignature());
 
-                //Condition commentée, l'idée initiale était de compter que les liens interne aux programmes,
-                // Pas les méthode vers les Spring, Java.utils, etc etc
-                // J'ai pris le partie de finalement les incorporer dans le comptage, puisque je me retrouvais avec des situations étrange
-                // Ou les petites classes faisant appel une fois à une méthode interne, et 100 fois à des méthode "externes"
-                // Se retrouvait avec des couplages à 100%
-                // Ce qui est sémantiquement faux.
-
-//                if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
-//                    continue;
-//                }
+                if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
+                    continue;
+                }
 
                 if (!classFemelle.equals(classMale)){
                     nbrDeLienSortantDeLaClasse++;
@@ -60,6 +53,13 @@ public class CouplingGraph {
                     String currentSignatureOfCouple = newCouple.twoSignature();
 
                     lienEntrePairs.putIfAbsent(currentSignatureOfCouple, newCouple);
+                    if (nbrLienEntreToutesLesClasses.containsKey(classMale)){
+                int valeurActuelle = nbrLienEntreToutesLesClasses.get(classMale);
+                nbrLienEntreToutesLesClasses.put(classMale,valeurActuelle+nbrDeLienSortantDeLaClasse);
+            }
+            else {
+                nbrLienEntreToutesLesClasses.put(classMale,nbrDeLienSortantDeLaClasse);
+            }
 
                     lienEntrePairs.get(currentSignatureOfCouple).addOneLink();
                 }

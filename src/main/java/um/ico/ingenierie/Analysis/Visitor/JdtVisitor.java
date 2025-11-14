@@ -51,6 +51,7 @@ public class JdtVisitor extends ASTVisitor implements IVisitor{
         localClass.addAttributs(new AbstractSourceAttributs(localClass,node.getType().toString(),nameOfAttributs));
         return true;
     }
+
     @Override
     public boolean visit(ClassInstanceCreation node) {
         // On s'assure d'être dans le contexte d'une méthode de notre projet
@@ -105,6 +106,7 @@ public class JdtVisitor extends ASTVisitor implements IVisitor{
 
         return false;
     }
+
     @Override
     public boolean visit(ThrowStatement node) {
         // On s'assure d'être dans le contexte d'une méthode de notre projet

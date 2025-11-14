@@ -1,76 +1,69 @@
+<!-- File: index.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Analyseur de Code Java</title>
-  <script type="module" crossorigin src="/assets/index-ChLnl0KW.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-BNIePI9F.css">
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analyseur de Projet Java</title>
+  <script type="module" crossorigin src="/assets/index-CuqJSJMc.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CLTrqNtM.css">
 </head>
 <body>
-
-    <header>
-        <h1>Analyseur de Code Statique</h1>
-    </header>
-
-    <main>
-        <section id="controls">
-            <div class="analysis-option">
-                <h2>Analyser un dépôt Git</h2>
-                <input type="text" id="gitUrlInput" placeholder="https://github.com/user/repo.git">
-                <button id="analyzeGitBtn">Lancer l'Analyse</button>
+    <div id="app">
+        <header>
+            <h1>Analyseur de Projet Java</h1>
+            <div class="input-section">
+                <input type="text" id="gitUri" placeholder="URL du repository Git" />
+                <button id="analyzeBtn">Analyser</button>
             </div>
-
-            <div class="analysis-option">
-                <h2>Analyser un projet .zip</h2>
-                <input type="file" id="zipFileInput" accept=".zip">
-                <button id="analyzeZipBtn">Lancer l'Analyse</button>
+        </header>
+        
+        <div id="loader" class="loader hidden">
+            <div class="spinner"></div>
+            <p>Analyse en cours...</p>
+        </div>
+        
+        <div id="error" class="error hidden"></div>
+        
+        <main id="results" class="hidden">
+            <section id="metrics-section">
+                <h2>Métriques</h2>
+                <div id="metrics-cards"></div>
+                <div id="metrics-summary"></div>
+            </section>
+            
+            <section id="call-graph-section">
+                <div class="section-header">
+                    <h2>Graphe d'Appels</h2>
+                    <div class="button-group">
+                        <button id="call-graph-filter" class="filter-btn">Filtrer par package de base</button>
+                        <button id="call-graph-fullscreen" class="fullscreen-btn">⛶ Plein écran</button>
+                    </div>
+                </div>
+                <div id="call-graph"></div>
+            </section>
+            
+            <section id="coupling-section">
+                <div class="section-header">
+                    <h2>Graphe de Couplage</h2>
+                    <div class="button-group">
+                        <button id="coupling-graph-filter" class="filter-btn">Filtrer par package de base</button>
+                        <button id="coupling-graph-fullscreen" class="fullscreen-btn">⛶ Plein écran</button>
+                    </div>
+                </div>
+                <div id="coupling-graph"></div>
+            </section>
+        </main>
+        
+        <!-- Modal plein écran pour les graphes -->
+        <div id="fullscreen-modal" class="fullscreen-modal hidden">
+            <div class="fullscreen-header">
+                <h2 id="fullscreen-title">Graphe</h2>
+                <button id="fullscreen-close" class="close-btn">✕</button>
             </div>
-        </section>
-
-        <section id="results" class="hidden">
-            <div id="loader">
-                <p>Analyse en cours, veuillez patienter...</p>
-            </div>
-
-            <div id="results-content" class="hidden">
-                <h2>Résultats de l'Analyse</h2>
-                
-                <h3>Métriques</h3>
-                <table id="metricsTable">
-                    <tbody id="metricsTableBody">
-                        <!-- Le contenu sera généré par JavaScript -->
-                    </tbody>
-                </table>
-
-                <h3>Graphe d'Appel Interactif</h3>
-                
-                <div id="view-selector">
-                    <button class="view-btn active" data-view="force">Explorateur de Flux</button>
-                    <button class="view-btn" data-view="arc">Diagramme d'Arcs</button>
-                    <button class="view-btn" data-view="matrix">Matrice de Connectivité</button>
-                </div>
-
-                <div id="graph-controls">
-                    <strong>Filtres :</strong>
-                    <label><input type="checkbox" id="filter-call" value="CALL" checked> Appels</label>
-                    <label><input type="checkbox" id="filter-instantiation" value="INSTANTIATION" checked> Instanciations</label>
-                    <label><input type="checkbox" id="filter-throws" value="THROWS" checked> Exceptions</label>
-                    <label class="control-separator">
-                        <input type="checkbox" id="filter-internal" checked> Uniquement les appels internes
-                    </label>
-                </div>
-
-                <div id="graphContainer">
-                    <!-- Le graphe SVG sera injecté ici -->
-                </div>
-                
-                <div class="graph-actions">
-                    <button id="fullscreen-btn">Plein écran</button>
-                    <a id="downloadBtn" href="#" download="call-graph.svg">Télécharger (SVG)</a>
-                </div>
-            </div>
-        </section>
-    </main>
-
+            <div id="fullscreen-graph"></div>
+        </div>
+    </div>
 </body>
 </html>

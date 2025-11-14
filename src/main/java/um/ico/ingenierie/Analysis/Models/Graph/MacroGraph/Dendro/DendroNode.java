@@ -1,0 +1,136 @@
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro;
+
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
+
+import java.util.Objects;
+import java.util.Set;
+
+public class DendroNode{
+
+    private DendroNode leftChild;
+    private DendroNode rightChild;
+    private DendroNode parent = null;
+
+    private double hauteurCoupling;
+
+    private String className;
+
+    //Conteneur final
+    // On utilise Set pour avoir des éléments unique et non ordonnées
+    private Set<String> classContenu;
+
+    // Constructeur vide protégé pour peut être des itérations plus tard avec des librarie comme JPA Hibernate
+    // Qui en nécessite par défaut
+    protected DendroNode(){};
+
+    // Constructeur pour les Noeuds feuille
+    public DendroNode(String className){
+        this.leftChild = null;
+        this.rightChild = null;
+        this.hauteurCoupling = 1.0;
+        this.className = className;
+    }
+
+    //Root DendroNode
+
+    //Constructeur pour les noeuds représentant les fusions entre deux noeuds
+
+    public DendroNode(DendroNode child1, DendroNode child2, double couplingValue){
+        this.leftChild = child1;
+        this.rightChild = child2;
+        this.hauteurCoupling = couplingValue;
+        //TODO METTRE TOUTES LES CLASSES dans un noeud pour l'algo DENDOGRAMME
+    }
+
+    public boolean isLeaf() {
+        // Une feuille EST DÉFINIE par le fait d'avoir un nom de classe.
+        // Un nœud interne (une fusion de clusters) n'en a pas.
+        return this.className != null;
+    }
+
+//    public DendroNode from(PaireClass paireClass){
+//        return new DendroNode(paireClass.getSignClassA(),paireClass.getSignClassB(),paireClass.getCouplage());
+//    }
+    public DendroNode getParent(){
+        return this.parent;
+    }
+
+    public boolean hasParent(){
+        if (this.getParent() == null){
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public DendroNode getLeftChild() {
+        return leftChild;
+    }
+
+    public DendroNode getRightChild() {
+        return rightChild;
+    }
+
+    public double getHauteurCoupling() {
+        return hauteurCoupling;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public Set<String> getClassContenu() {
+        return classContenu;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DendroNode that = (DendroNode) o;
+
+        // Si l'un est une feuille et l'autre non, ils sont différents.
+        if (this.isLeaf() != that.isLeaf()) {
+            return false;
+        }
+
+        if (isLeaf()) {
+            // Pour les feuilles, on compare le nom de la classe.
+            return Objects.equals(className, that.className);
+        } else {
+            // Pour les nœuds internes, on compare les enfants, peu importe l'ordre.
+            // (A, B) est égal à (B, A).
+            return (leftChild.equals(that.leftChild) && rightChild.equals(that.rightChild)) ||
+                    (leftChild.equals(that.rightChild) && rightChild.equals(that.leftChild));
+        }
+    }
+
+    /**
+     * Le hashCode doit être cohérent avec equals.
+     * Si equals est vrai, les hashCodes doivent être identiques.
+     */
+    @Override
+    public int hashCode() {
+        if (isLeaf()) {
+            // Le hashCode d'une feuille est basé sur son nom.
+            return Objects.hash(className);
+        } else {
+            // Pour un nœud interne, on utilise une opération commutative (addition ou XOR)
+            // sur les hashCodes des enfants pour que l'ordre n'importe pas.
+            // (A, B) aura le même hashCode que (B, A).
+            return leftChild.hashCode() + rightChild.hashCode();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "DendroNode{" +
+                "leftChild=" + leftChild +
+                ", rightChild=" + rightChild +
+                ", parent=" + parent +
+                ", hauteurCoupling=" + hauteurCoupling +
+                ", className='" + className + '\'' +
+                ", classContenu=" + classContenu +
+                '}';
+    }
+}

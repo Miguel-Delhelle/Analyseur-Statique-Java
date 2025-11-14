@@ -1,0 +1,2257 @@
+===== ./test/java/um/ico/ingenierie/AstIngenierieApplicationTests.java =====
+package um.ico.ingenierie;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+class AstIngenierieApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+    public static String signatureToNameOfClass(String signature) throws Exception {
+        String afterHash = signature.split("#")[0];
+        String[] tabResult = afterHash.split("\\.");
+        return tabResult[tabResult.length - 1];
+    }
+
+    @Test
+    void testSignatureToNameOfClass() throws Exception {
+        // given
+        String signature = "um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerPath#JavaFilesHandlerPath(java.lang.String)";
+
+        // when
+        String result = signatureToNameOfClass(signature);
+
+        // then
+        assertEquals("JavaFilesHandlerPath", result);
+    }
+
+    @Test
+    void testSignatureWithoutHash() throws Exception {
+        // given
+        String signature = "um.ico.ingenierie.MyClass";
+
+        // when
+        String result = signatureToNameOfClass(signature);
+
+        // then
+        assertEquals("MyClass", result);
+    }
+
+    @Test
+    void testSignatureWithMultipleDots() throws Exception {
+        // given
+        String signature = "com.company.project.module.submodule.MyClass#method()";
+
+        // when
+        String result = signatureToNameOfClass(signature);
+
+        // then
+        assertEquals("MyClass", result);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/AstIngenierieApplication.java =====
+    package um.ico.ingenierie;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+    /**
+ * Le Main, le point d'entrée c'est tout.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ * */
+
+@SpringBootApplication
+public class AstIngenierieApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(AstIngenierieApplication.class, args);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/JavaFilesHandler/IJavaFilesHandler.java =====
+package um.ico.ingenierie.JavaFilesHandler;
+
+import um.ico.ingenierie.Common.Exceptions.NoJavaPathExceptions;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+public interface IJavaFilesHandler {
+
+    public List<Path> getAllPathJava();
+
+    public Path getRootPath();
+
+    @Deprecated(since = "Ancienne méthode du tout début, cependant je la garde déprécié psk c'est fort pratique d'extraire tout le code dans la console")
+    default public String javaToString() throws IOException {
+
+        List<Path> toutLesCheminsJava = this.getAllPathJava();
+        String toutLeCodeJava = "";
+        if (toutLesCheminsJava.isEmpty()){throw new NoJavaPathExceptions(this.getRootPath());
+        }
+        for (Path unChemin : toutLesCheminsJava){
+            toutLeCodeJava = toutLeCodeJava + Files.readString(unChemin);
+        }
+        return toutLeCodeJava;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/JavaFilesHandler/JavaFilesHandlerZip.java =====
+package um.ico.ingenierie.JavaFilesHandler;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.FileSystemUtils;
+import org.springframework.web.multipart.MultipartFile;
+import um.ico.ingenierie.Common.Exceptions.NoJavaPathExceptions;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+/**
+ * Implémentation de IJavaFilesHandler pour une source de type fichier ZIP.
+ * Gère la création et le nettoyage automatique d'un répertoire temporaire.
+ * DOIT être utilisée dans un bloc try-with-resources pour garantir le nettoyage.
+ */
+public class JavaFilesHandlerZip implements IJavaFilesHandler, AutoCloseable {
+
+    private static final Logger log = LoggerFactory.getLogger(JavaFilesHandlerZip.class);
+
+    private final Path tempDir;
+    private final List<Path> pathList;
+
+    /**
+     * Constructeur qui prend le fichier ZIP uploadé.
+     * Il crée un répertoire temporaire, y décompresse le contenu et trouve les fichiers .java.
+     * @param zipFile Le fichier MultipartFile envoyé par le client.
+     * @throws IOException Si une erreur d'I/O survient.
+     */
+    public JavaFilesHandlerZip(MultipartFile zipFile) throws IOException {
+        // 1. Crée le dossier temporaire. C'est la seule chose que le constructeur fait.
+        this.tempDir = Files.createTempDirectory("ast-analysis-zip-");
+
+        // 2. On appelle une méthode privée pour faire le vrai travail.
+        this.pathList = processZipFile(zipFile, this.tempDir);
+    }
+
+    private List<Path> processZipFile(MultipartFile zipFile, Path destinationDir) throws IOException {
+        log.info("Décompression du fichier '{}' dans : {}", zipFile.getOriginalFilename(), destinationDir);
+
+        // On ouvre le flux ici, dans un try-with-resources pour qu'il soit bien fermé.
+        try (ZipInputStream zis = new ZipInputStream(zipFile.getInputStream())) {
+            byte[] buffer = new byte[1024];
+            ZipEntry zipEntry;
+            while ((zipEntry = zis.getNextEntry()) != null) {
+                File newFile = new File(destinationDir.toFile(), zipEntry.getName());
+                if (zipEntry.isDirectory()) {
+                    if (!newFile.isDirectory() && !newFile.mkdirs()) {
+                        throw new IOException("Échec de la création du répertoire " + newFile);
+                    }
+                } else {
+                    File parent = newFile.getParentFile();
+                    if (!parent.isDirectory() && !parent.mkdirs()) {
+                        throw new IOException("Échec de la création du répertoire " + parent);
+                    }
+                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                }
+            }
+        }
+        log.info("Décompression terminée.");
+
+        // La logique de recherche est maintenant appelée APRES la décompression.
+        return findJavaFilesInPath(destinationDir);
+    }
+
+    private List<Path> findJavaFilesInPath(Path basePath) throws NoJavaPathExceptions {
+        log.debug("Recherche des fichiers .java dans {}", basePath);
+        String separator = FileSystems.getDefault().getSeparator();
+        String srcMainPathFragment = "src" + separator + "main";
+
+        try (Stream<Path> walker = Files.walk(basePath)) {
+            List<Path> files = walker
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().contains(srcMainPathFragment) && path.toString().endsWith(".java"))
+                    .collect(Collectors.toList());
+
+            if (files.isEmpty()) {
+                throw new NoJavaPathExceptions("Le fichier ZIP ne contient aucun fichier .java dans un sous-dossier 'src/main'.", basePath);
+            }
+            log.info("{} fichiers .java trouvés.", files.size());
+            return files;
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors du parcours des fichiers temporaires.", e);
+        }
+    }
+
+    @Override
+    public List<Path> getAllPathJava() {
+        return this.pathList;
+    }
+
+    @Override
+    public Path getRootPath() {
+        return this.tempDir;
+    }
+
+    /**
+     * Cette méthode est appelée automatiquement par le try-with-resources.
+     * Elle garantit le nettoyage du répertoire temporaire.
+     */
+    @Override
+    public void close() throws IOException {
+        if (tempDir != null && Files.exists(tempDir)) {
+            log.info("Nettoyage du répertoire temporaire : {}", tempDir);
+            FileSystemUtils.deleteRecursively(tempDir);
+        }
+    }
+}
+===== ./main/java/um/ico/ingenierie/JavaFilesHandler/JavaFilesHandlerPath.java =====
+package um.ico.ingenierie.JavaFilesHandler;
+
+import um.ico.ingenierie.Common.Exceptions.NoJavaPathExceptions;
+
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+
+/**
+ * Cette classe à pour but de transformer un chemin d'un répertoire contenant du Java passé en chaine de caractère
+ * Par un tableau de caractères ou un String contenant que du code Java.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+@Deprecated(since = "Cette méthode était pensé pour une utilisation en Cli, ou en local. " +
+        "Elle est gardé à des fins de pouvoir revenir sur cette utilisation si besoin" +
+        "Cependant, elle est normalement inutilisée.")
+public class JavaFilesHandlerPath implements IJavaFilesHandler {
+
+    private Path chemin = Paths.get(".");
+    private List<Path> allPathJava = new ArrayList<Path>();
+
+    public JavaFilesHandlerPath() throws IOException {
+        this.allPathJava = this.allPathJava();
+    }
+
+    public JavaFilesHandlerPath(String path) throws IOException {
+        this.chemin = Paths.get(path);
+        this.allPathJava = this.allPathJava();
+    }
+
+    @Override
+    public Path getRootPath() {
+        return chemin;
+    }
+
+    public void setChemin(Path chemin) {
+        this.chemin = chemin;
+    }
+
+    private List<Path> allPathJava() throws IOException {
+        List<Path> toutLesCheminsJava = new ArrayList<Path>();
+        String separator = FileSystems.getDefault().getSeparator();
+        String srcMainPathFragment = "src" + separator + "main";
+        try (Stream<Path> walker = Files.walk(this.chemin)) {
+            toutLesCheminsJava = walker
+                    .filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String pathAsString = path.toString();
+                        return pathAsString.endsWith(".java") &&
+                                pathAsString.contains(srcMainPathFragment);
+                    })
+                    .collect(Collectors.toList());
+        }
+        if (toutLesCheminsJava.isEmpty()) {
+            throw new NoJavaPathExceptions(this.chemin);
+        }
+        return toutLesCheminsJava;
+    }
+
+    public String[] allPathToStringArray() throws IOException {
+
+        List<Path> toutLesCheminsJava = this.getAllPathJava();
+        List<String> allPathInString = new ArrayList<String>();
+        if (toutLesCheminsJava.isEmpty()){throw new NoJavaPathExceptions(this.chemin);}
+        for (Path unChemin : toutLesCheminsJava){
+            allPathInString.add(unChemin.toString());
+        }
+        String[] arrayFinal = allPathInString.toArray(String[]::new);
+        return arrayFinal;
+    }
+
+    @Deprecated(since = "Ancienne méthode du tout début, cependant je la garde déprécié psk c'est fort pratique d'extraire tout le code dans la console")
+    public String javaToString() throws IOException {
+
+        List<Path> toutLesCheminsJava = this.getAllPathJava();
+        String toutLeCodeJava = "";
+        if (toutLesCheminsJava.isEmpty()){throw new NoJavaPathExceptions(this.chemin);
+        }
+        for (Path unChemin : toutLesCheminsJava){
+            toutLeCodeJava = toutLeCodeJava + Files.readString(unChemin);
+        }
+        return toutLeCodeJava;
+    }
+
+    public List<Path> getAllPathJava() {
+        return allPathJava;
+    }
+
+    public int getNumberOfJavaFiles(){
+        return this.allPathJava.size();
+    }
+
+    public static char[] getJavaFile(Path path) throws IOException {
+        return Files.readString(path).toCharArray();
+    }
+
+}
+
+===== ./main/java/um/ico/ingenierie/JavaFilesHandler/JavaFilesHandlerGit.java =====
+package um.ico.ingenierie.JavaFilesHandler;
+
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.FileSystemUtils;
+import um.ico.ingenierie.Common.Exceptions.NoJavaPathExceptions;
+
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Implémentation de IJavaFilesHandler pour une source de type dépôt Git.
+ * Cette classe clone un dépôt distant dans un répertoire temporaire
+ * et est responsable de son nettoyage.
+ * Elle doit être utilisée dans un bloc try-with-resources.
+ */
+public class JavaFilesHandlerGit implements IJavaFilesHandler, AutoCloseable {
+
+    private static final Logger log = LoggerFactory.getLogger(JavaFilesHandlerGit.class);
+
+    private Path tempDir;
+    private List<Path> pathList;
+
+    /**
+     * Constructeur qui prend l'URL d'un dépôt Git, le clone dans un répertoire temporaire,
+     * et prépare l'analyse des fichiers .java.
+     *
+     * @param gitUrl L'URL du dépôt Git à cloner (ex: https://github.com/user/repo.git).
+     * @throws IOException Si une erreur de création de dossier survient.
+     * @throws GitAPIException Si une erreur survient durant le clonage (URL invalide, dépôt privé...).
+     */
+    public JavaFilesHandlerGit(String gitUrl) throws IOException, GitAPIException {
+        // 1. Crée le dossier temporaire
+        this.tempDir = Files.createTempDirectory("ast-analysis-git-");
+
+        log.info("Clonage du dépôt '{}' dans le dossier temporaire : {}", gitUrl, tempDir);
+
+        // 2. Clone le dépôt Git en utilisant JGit
+        try {
+            Git.cloneRepository()
+                    .setURI(gitUrl)
+                    .setDirectory(tempDir.toFile())
+                    .setDepth(1) // Optimisation : ne clone que la dernière version des fichiers (pas tout l'historique)
+                    .call();
+            log.info("Clonage terminé avec succès.");
+        } catch (GitAPIException e) {
+            close();
+            throw e;
+        }
+
+        this.pathList = allPathJava();
+    }
+
+    private List<Path> allPathJava() throws IOException {
+        List<Path> toutLesCheminsJava = new ArrayList<Path>();
+        String separator = FileSystems.getDefault().getSeparator();
+        String srcMainPathFragment = "src" + separator + "main";
+        try (Stream<Path> walker = Files.walk(this.getRootPath())) {
+            toutLesCheminsJava = walker
+                    .filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String pathAsString = path.toString();
+                        return pathAsString.endsWith(".java") &&
+                                pathAsString.contains(srcMainPathFragment);
+                    })
+                    .collect(Collectors.toList());
+        }
+        if (toutLesCheminsJava.isEmpty()) {
+            throw new NoJavaPathExceptions(this.getRootPath());
+        }
+        return toutLesCheminsJava;
+    }
+
+    @Override
+    public void close() throws IOException {
+        // 4. Nettoie le dossier temporaire à la fin
+        log.info("Nettoyage du dossier temporaire Git : {}", tempDir);
+        FileSystemUtils.deleteRecursively(tempDir);
+    }
+
+    @Override
+    public List<Path> getAllPathJava() {
+        return this.pathList;
+    }
+
+    @Override
+    public Path getRootPath() {
+        return tempDir;
+    }
+}
+===== ./main/java/um/ico/ingenierie/Analysis/CodeAnalyzer.java =====
+package um.ico.ingenierie.Analysis;
+
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
+import um.ico.ingenierie.Analysis.Visitor.JdtVisitor;
+import um.ico.ingenierie.Api.Response.AnalysisResponse;
+import um.ico.ingenierie.Common.Exceptions.NoCompilationUnitExceptions;
+import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
+import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerPath;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Arrays;
+
+/**
+ * Le CodeAnalyzer a pour but de parcourir une arborescence de fichiers donnée par le JavaFilesHandler
+ * et d'exécuter une Analyze, elle prend en entrée un path, si il n'est pas renseigné il execute sur lui même.
+ *
+ * Il contient un callGraph permettant d'avoir le graphe d'appel.
+ * Ainsi qu'un metricsData correspondant
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ * */
+
+public class CodeAnalyzer {
+
+    private static final Logger log = LoggerFactory.getLogger(CodeAnalyzer.class);
+
+    private IJavaFilesHandler filesHandler;
+
+    public CodeAnalyzer() {
+
+    }
+
+    public CodeAnalyzer(String path) throws IOException {
+        this.filesHandler = new JavaFilesHandlerPath(path);
+    }
+
+    public CodeAnalyzer(IJavaFilesHandler javaFilesHandler) throws IOException {
+        this.filesHandler = javaFilesHandler;
+    }
+
+    public AnalysisResponse analyze() {
+
+        log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.filesHandler.getRootPath());
+        log.debug("Nombre de fichiers .java trouvés : {}", this.filesHandler.getAllPathJava().size());
+
+        String[] classPath = System.getProperty("java.class.path").split(File.pathSeparator);
+        String[] sources = {this.getFilesHandler().getRootPath().toString()};
+
+        log.info("Classpath utilisé : " + Arrays.toString(classPath));
+        log.info("Sourcepath utilisé : " + Arrays.toString(sources));
+        MetricsData metricsData = new MetricsData();
+        CallGraph callGraph = new CallGraph();
+
+        for (Path filePath : this.filesHandler.getAllPathJava()){
+            try{
+                CompilationUnit cu = initCu(classPath,sources,filePath);
+                JdtVisitor visitor = new JdtVisitor(cu);
+                cu.accept(visitor);
+
+                SingleFileAnalysisResult singleFileAnalysisResult = visitor.getResult();
+
+                log.info("Analyse du fichier "+filePath.toString()+"terminée.");
+
+                metricsData.addClass(singleFileAnalysisResult.getFoundClass());
+                callGraph.addEdges(singleFileAnalysisResult.getFoundEdges());
+
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return AnalysisResponse.from(metricsData,callGraph);
+    }
+
+    private CompilationUnit initCu(String[] classPath,String[] sources,Path filePath) throws IOException {
+        ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+        parser.setResolveBindings(true);
+        parser.setKind(ASTParser.K_COMPILATION_UNIT);
+        parser.setEnvironment(classPath,sources,null, true);
+        parser.setUnitName(filePath.toString());
+        parser.setSource(JavaFilesHandlerPath.getJavaFile(filePath));
+        CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+        if (cu == null) {
+            log.error("AVERTISSEMENT: Impossible de créer l'AST pour " + filePath);
+            throw new NoCompilationUnitExceptions();
+        }
+        if (cu.getProblems() != null && cu.getProblems().length > 0) {
+            log.warn("AVERTISSEMENT: Problèmes de compilation détectés dans " + filePath + ". Les bindings pourraient être incomplets.");
+        }
+        return cu;
+    }
+
+    protected IJavaFilesHandler getFilesHandler() {
+        return filesHandler;
+    }
+}
+
+
+===== ./main/java/um/ico/ingenierie/Analysis/Visitor/IVisitor.java =====
+package um.ico.ingenierie.Analysis.Visitor;
+
+import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
+
+public interface IVisitor {
+
+    public SingleFileAnalysisResult getResult();
+
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Visitor/SpoonVisitor.java =====
+package um.ico.ingenierie.Analysis.Visitor;
+
+import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
+
+public class SpoonVisitor implements IVisitor {
+
+    //TODO
+    @Override
+    public SingleFileAnalysisResult getResult() {
+        return null;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Visitor/JdtVisitor.java =====
+package um.ico.ingenierie.Analysis.Visitor;
+
+import org.eclipse.jdt.core.dom.*;
+import um.ico.ingenierie.Analysis.Models.SourceCode.*;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.EdgeType;
+import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
+import um.ico.ingenierie.Common.utils.IcoUtils;
+
+import java.util.*;
+
+public class JdtVisitor extends ASTVisitor implements IVisitor{
+
+    private String currentMethodSignature = null;
+
+    private AbstractSourcePackage localPackage = new AbstractSourcePackage();
+    private AbstractSourceClass localClass = new AbstractSourceClass();
+    private Map<String, Set<Edge>> localEdge = new HashMap<>();
+    private CompilationUnit cu;
+
+    public JdtVisitor(CompilationUnit cu) {
+        this.cu = cu;
+    }
+
+    @Override
+    public boolean visit(PackageDeclaration node){
+        localPackage.setName(node.getName().toString());
+        return true;
+    }
+
+    @Override
+    public boolean visit(TypeDeclaration node) {
+        localClass.setNameOfClass(node.getName().toString());
+        localClass.setPackageParent(localPackage);
+        int startPosition = node.getStartPosition();
+        int endPosition = startPosition + node.getLength() - 1;
+        int startLine = cu.getLineNumber(startPosition);
+        int endLine = cu.getLineNumber(endPosition);
+        int lineCount = endLine - startLine;
+        localClass.setNumberOfLinesInClass(lineCount);
+
+        ITypeBinding binding = node.resolveBinding();
+        localClass.setTypeOfClass(determineNodeType(binding));
+
+        return true;
+    }
+
+    @Override
+    public boolean visit(FieldDeclaration node){
+        String nameOfAttributs = node.fragments().get(0).toString();
+        localClass.addAttributs(new AbstractSourceAttributs(localClass,node.getType().toString(),nameOfAttributs));
+        return true;
+    }
+
+    @Override
+    public boolean visit(ClassInstanceCreation node) {
+        // On s'assure d'être dans le contexte d'une méthode de notre projet
+        if (currentMethodSignature != null) {
+            // On récupère le "binding" du constructeur qui est appelé
+            IMethodBinding constructorBinding = node.resolveConstructorBinding();
+            if (constructorBinding != null) {
+                // On utilise notre méthode createMethodSignature pour obtenir la signature du constructeur
+                String calleeSignature = IcoUtils.createMethodSignature(constructorBinding);
+
+                // On ajoute une arête de la méthode courante vers le constructeur appelé
+                //TODO REFAIRE CALLGRAPH
+                // callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.INSTANTIATION);
+                localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.INSTANTIATION));
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean visit(MethodDeclaration node){
+       //methodCounter.incrementAndGet();
+        //System.out.println(node.getName()+"\n"+node.parameters()+"\n"+node.getReturnType2());
+        try {
+            List<String> listParameters = new ArrayList<>();
+            int numberOfLines = 0;
+            numberOfLines = numberOfLines + cu.getLineNumber(node.getBody().getLength());
+            localClass.addMethod(new AbstractSourceMethods(localClass,node.isConstructor(),node.getName().toString(),node.parameters(),node.getReturnType2(),numberOfLines));
+            IMethodBinding binding = node.resolveBinding();
+            if (binding != null){
+                this.currentMethodSignature = IcoUtils.createMethodSignature(binding) ;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+    @Override
+    public void endVisit(MethodDeclaration node) {
+        this.currentMethodSignature = null;
+    }
+    @Override
+    public boolean visit(MethodInvocation node) {
+        if (currentMethodSignature != null){
+            IMethodBinding calledMethodBinding = node.resolveMethodBinding();
+            if (calledMethodBinding != null){
+                String calleeSignature = IcoUtils.createMethodSignature(calledMethodBinding);
+                localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.CALL));
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean visit(ThrowStatement node) {
+        // On s'assure d'être dans le contexte d'une méthode de notre projet
+        if (currentMethodSignature != null) {
+            // L'expression dans un throw est souvent un "new Exception(...)"
+            // On vérifie donc si c'est une création d'instance
+            if (node.getExpression() instanceof ClassInstanceCreation newException) {
+                IMethodBinding constructorBinding = newException.resolveConstructorBinding();
+                if (constructorBinding != null) {
+                    String calleeSignature = IcoUtils.createMethodSignature(constructorBinding);
+                    // TODO
+                    //  callGraph.addEdge(currentMethodSignature, calleeSignature, EdgeType.THROWS);
+                    localEdge.computeIfAbsent(currentMethodSignature, k -> new HashSet<>()).add(new Edge(calleeSignature,EdgeType.THROWS));
+                }
+            }
+        }
+        return super.visit(node);
+    }
+
+    public AbstractSourcePackage getLocalPackage() {
+        return localPackage;
+    }
+
+    public String getCurrentMethodSignature() {
+        return currentMethodSignature;
+    }
+
+    public AbstractSourceClass getLocalClass() {
+        return localClass;
+    }
+
+    public Map<String, Set<Edge>> getLocalEdge() {
+        return localEdge;
+    }
+
+    public CompilationUnit getCu() {
+        return cu;
+    }
+
+    public SingleFileAnalysisResult getResult(){
+        return new SingleFileAnalysisResult(getLocalClass(),getLocalEdge());
+    }
+
+    private TypeOfClass determineNodeType(ITypeBinding binding) {
+        if (binding.isInterface()) return TypeOfClass.INTERFACE;
+        if (binding.isEnum()) return TypeOfClass.ENUM;
+        if (binding.isRecord()) return TypeOfClass.RECORD;
+
+        // Vérification pour les exceptions en remontant l'arbre d'héritage
+        ITypeBinding superclass = binding.getSuperclass();
+        while (superclass != null) {
+            if ("java.lang.Throwable".equals(superclass.getQualifiedName())) {
+                return TypeOfClass.EXCEPTION;
+            }
+            superclass = superclass.getSuperclass();
+        }
+
+        // Par défaut, c'est une classe standard.
+        return TypeOfClass.CLASS;
+    }
+//
+//    public CallGraph getCallGraph() {
+//        return callGraph;
+//    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/SourceCode/AbstractSourcePackage.java =====
+package um.ico.ingenierie.Analysis.Models.SourceCode;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Cette classe, est un modèle de répresentation abstraite
+ * de la représentation d'un package trouvé dans le code source analysé.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+
+public class AbstractSourcePackage implements Serializable {
+
+    private String name;
+    private List<AbstractSourceClass> lesClass = new ArrayList<AbstractSourceClass>();
+
+    public AbstractSourcePackage() {
+    }
+
+    public AbstractSourcePackage(String name) {
+        this.name = name;
+    }
+
+    public AbstractSourcePackage(String name, List<AbstractSourceClass> lesClass) {
+        this.name = name;
+        this.lesClass = lesClass;
+    }
+
+    public void addClassToPackage(AbstractSourceClass sourceClass){
+        if (lesClass.contains(sourceClass)){return;}
+        else {
+            this.lesClass.add(sourceClass);
+        }
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public List<AbstractSourceClass> getLesClass() {
+        return lesClass;
+    }
+
+    private void setLesClass(List<AbstractSourceClass> lesClass) {
+        this.lesClass = lesClass;
+    }
+
+    @Override
+    public String toString() {
+        return "AbstractPackageSource{" +
+                "name='" + name + '\'' +
+                ", lesClass=" + lesClass +
+                '}';
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/SourceCode/AbstractSourceMethods.java =====
+package um.ico.ingenierie.Analysis.Models.SourceCode;
+
+import org.eclipse.jdt.core.dom.Type;
+
+import java.io.Serializable;
+import java.util.List;
+
+
+/**
+ * Cette classe, est un modèle de répresentation abstraite
+ * de la représentation d'une méthode trouvé dans le code source analysé.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+public class AbstractSourceMethods implements Serializable {
+
+    private AbstractSourceClass parentClass;
+    private boolean isConstructor;
+    private String name;
+    private List<String> parameters;
+    private Type returnType;
+    private int numberOfLines;
+
+    public AbstractSourceMethods(AbstractSourceClass parentClass, boolean isConstructor, String name, List<String> parameters, Type returnType, int numberOfLines) {
+        this.parentClass = parentClass;
+        this.isConstructor = isConstructor;
+        this.name = name;
+        this.parameters = parameters;
+        this.returnType = returnType;
+        this.numberOfLines = numberOfLines;
+    }
+
+    @Override
+    public String toString() {
+        return "AbstractSourceMethods{" +
+                ", isConstructor=" + isConstructor +
+                ", name='" + name + '\'' +
+                ", parameters=" + parameters +
+                ", returnType='" + returnType + '\'' +
+                ", Number of Lines:"+numberOfLines;
+    }
+
+    public AbstractSourceClass getParentClass() {
+        return parentClass;
+    }
+
+    public boolean isConstructor() {
+        return isConstructor;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<String> getParameters() {
+        return parameters;
+    }
+
+    public Type getReturnType() {
+        return returnType;
+    }
+
+    public int getNumberOfLines() {
+        return numberOfLines;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/SourceCode/AbstractSourceAttributs.java =====
+package um.ico.ingenierie.Analysis.Models.SourceCode;
+
+import java.io.Serializable;
+
+/**
+ * Cette classe, est un modèle de répresentation abstraite
+ * de la représentation d'un attributs trouvé dans le code source analysé.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+public class AbstractSourceAttributs implements Serializable {
+
+    private AbstractSourceClass classParent;
+    private String typeOfAttributs;
+    private String nameOfAttributs;
+
+    public AbstractSourceAttributs() {
+    }
+
+    public AbstractSourceAttributs(AbstractSourceClass classParent, String typeOfAttributs, String nameOfAttributs) {
+        this.classParent = classParent;
+        this.typeOfAttributs = typeOfAttributs;
+        this.nameOfAttributs = nameOfAttributs;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/SourceCode/AbstractSourceClass.java =====
+package um.ico.ingenierie.Analysis.Models.SourceCode;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+
+/**
+ * Cette classe, est un modèle de répresentation abstraite
+ * de la représentation d'une Class dans le code source analysé.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+public class AbstractSourceClass implements Serializable {
+
+    private String nameOfClass;
+    private AbstractSourcePackage packageParent;
+    private List<AbstractSourceMethods> abstractSourceMethodsList = new ArrayList<AbstractSourceMethods>();
+    private List<AbstractSourceAttributs> abstractAttributsSourceList = new ArrayList<AbstractSourceAttributs>();
+    private int numberOfLinesInClass = 0;
+    private TypeOfClass typeOfClass;
+
+    public AbstractSourceClass() {
+    }
+
+    public AbstractSourceClass(String nameOfClass, int numberOfLinesInClass) {
+        this.nameOfClass = nameOfClass;
+        //this.numberOfMethods = numberOfMethods;
+        this.numberOfLinesInClass = numberOfLinesInClass;
+    }
+
+    public void setNameOfClass(String nameOfClass) {
+        this.nameOfClass = nameOfClass;
+    }
+
+    public void setNumberOfLinesInClass(int numberOfLinesInClass) {
+        this.numberOfLinesInClass = numberOfLinesInClass;
+    }
+
+    public AbstractSourcePackage getPackageParent() {
+        return packageParent;
+    }
+
+    public void setPackageParent(AbstractSourcePackage packageParent) {
+        this.packageParent = packageParent;
+    }
+
+    public boolean isEmpty() {
+        boolean noName = (nameOfClass == null || nameOfClass.isEmpty());
+        boolean noMethods = (getNumberOfMethods() == 0);
+        //boolean noAttributes = (numberOfAttributs == 0);
+        boolean noLines = (numberOfLinesInClass == 0);
+
+        return noName && noMethods && noLines;
+    }
+
+    public void addAttributs(AbstractSourceAttributs aas){
+        this.abstractAttributsSourceList.add(aas);
+    }
+
+    public int getNumberOfAttributs(){
+        return this.abstractAttributsSourceList.size();
+    }
+
+
+
+    public void addMethod(AbstractSourceMethods abstractSourceMethods){
+        this.abstractSourceMethodsList.add(abstractSourceMethods);
+    }
+
+    public List<AbstractSourceMethods> getAbstractSourceMethodsList() {
+        return abstractSourceMethodsList;
+    }
+
+    public void setAbstractSourceMethodsList(List<AbstractSourceMethods> abstractSourceMethodsList) {
+        this.abstractSourceMethodsList = abstractSourceMethodsList;
+    }
+
+    public List<AbstractSourceAttributs> getAbstractAttributsSourceList() {
+        return abstractAttributsSourceList;
+    }
+
+    public void setAbstractAttributsSourceList(List<AbstractSourceAttributs> abstractAttributsSourceList) {
+        this.abstractAttributsSourceList = abstractAttributsSourceList;
+    }
+
+    /**
+     * Cette méthode compte toutes les méthodes SAUF les constructeurs.
+     *
+     * @author Miguel Delhelle
+     * @version 1.0
+     */
+    public int getNumberOfMethods(){
+        return this.getAbstractSourceMethodsList()
+                .stream()
+                .filter(abstractSourceMethods -> !abstractSourceMethods.isConstructor()).toList().size();
+    }
+
+    public TypeOfClass getTypeOfClass() {
+        return typeOfClass;
+    }
+
+    public void setTypeOfClass(TypeOfClass typeOfClass) {
+        this.typeOfClass = typeOfClass;
+    }
+
+    public String getNameOfClass() {
+        return nameOfClass;
+    }
+
+    public int getNumberOfLinesInClass() {
+        return numberOfLinesInClass;
+    }
+
+    @Override
+    public String toString() {
+        return "\nAbstractSourceClass: \n" +
+                "\n --- nameOfClass='" + nameOfClass + '\'' +
+                "\n --- numberOfMethods=" + getNumberOfMethods() +
+                "\n --- numberOfAttributs=" + getNumberOfAttributs() +
+                "\n --- numberOfLinesInClass=" + numberOfLinesInClass +
+                "\n ------ Methods: "+abstractSourceMethodsList.toString();
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/SourceCode/TypeOfClass.java =====
+package um.ico.ingenierie.Analysis.Models.SourceCode;
+
+public enum TypeOfClass {
+    INTERFACE,
+    CLASS,
+    EXCEPTION,
+    ENUM,
+    RECORD
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/MetricsData.java =====
+package um.ico.ingenierie.Analysis.Models;
+
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceMethods;
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourcePackage;
+import um.ico.ingenierie.Common.results.SearchResult;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+/**
+ * La classe MetricsData a pour but de juste stocker les données d'un unique code Source.
+ * Il y a un MetricsData par code Source.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ * */
+
+public class MetricsData {
+
+    List<AbstractSourcePackage> abstractSourcePackageList = new ArrayList<AbstractSourcePackage>();
+    private List<AbstractSourceClass> abstractSourceClassList = new ArrayList<AbstractSourceClass>();
+
+    public MetricsData() {
+    }
+
+
+    public int getNumberOfPackage() {
+        return this.getAbstractPackageSourceList().size();
+    }
+
+    public int getNumberOfClass() {
+        return getAbstractSourceClassList().size();
+    }
+
+    public int getTotalNumberOfMethods() {
+        return this.abstractSourceClassList.stream()
+                .mapToInt(AbstractSourceClass::getNumberOfMethods)
+                .sum();
+    }
+
+    public int getTotalNumberOfLines() {
+        return this.abstractSourceClassList.stream()
+                .mapToInt(value -> value.getAbstractSourceMethodsList().stream().mapToInt(AbstractSourceMethods::getNumberOfLines).sum())
+                .sum();
+    }
+
+    public List<AbstractSourcePackage> getAbstractPackageSourceList() {
+        return abstractSourcePackageList;
+    }
+
+    public void setAbstractPackageSourceList(List<AbstractSourcePackage> abstractSourcePackageList) {
+        this.abstractSourcePackageList = abstractSourcePackageList;
+    }
+
+    public List<AbstractSourceClass> getAbstractSourceClassList() {
+        return abstractSourceClassList;
+    }
+
+    public void setAbstractSourceClassList(List<AbstractSourceClass> abstractSourceClassList) {
+        this.abstractSourceClassList = abstractSourceClassList;
+    }
+
+
+    // Méthodes
+
+    @Override
+    public String toString() {
+        return "MetricsData{" +
+                "number of Package= " + getNumberOfPackage() +
+                ", numberOfClass=" + getNumberOfClass() +
+                ", numberOfMethods=" + getTotalNumberOfMethods() +
+                ", numberOfLines=" +  getTotalNumberOfLines() +
+                ", abstractPackageSourceList=" + getAbstractPackageSourceList() +
+                '}';
+    }
+
+    private SearchResult verifyPaquetExistence(String nomDuNouveauPaquet) {
+        boolean bool = false;
+        for (int i = 0; i<this.abstractSourcePackageList.size(); i++) {
+            if (abstractSourcePackageList.get(i).getName().toString().equals(nomDuNouveauPaquet)) {
+                return new SearchResult(true,i);
+            }
+        }
+        return new SearchResult(false,-1);
+    }
+
+    public void addPackage(AbstractSourcePackage paquetSource) {
+        if (!verifyPaquetExistence(paquetSource.getName()).isExist()) {
+            this.abstractSourcePackageList.add(paquetSource);
+        }
+        ;
+    }
+
+    /**
+     * Ajoute une classe à la collection de métriques, en s'assurant de ne pas créer de doublons
+     * et en gérant la fusion des packages.
+     * @param classe La classe à ajouter.
+     */
+    public void addClass(AbstractSourceClass classe) {
+        if (classe == null || classe.getNameOfClass() == null) {
+            return;
+        }
+        boolean alreadyExists = abstractSourceClassList.stream()
+                .anyMatch(existingClass ->
+                        existingClass.getNameOfClass().equals(classe.getNameOfClass()) &&
+                                existingClass.getPackageParent().getName().equals(classe.getPackageParent().getName())
+                );
+        if (alreadyExists) {
+            return;
+        }
+        this.abstractSourceClassList.add(classe);
+        AbstractSourcePackage paquet = classe.getPackageParent();
+        Optional<AbstractSourcePackage> existingPackage = abstractSourcePackageList.stream()
+                .filter(p -> p.getName().equals(paquet.getName()))
+                .findFirst();
+        if (existingPackage.isPresent()) {
+            existingPackage.get().addClassToPackage(classe);
+        } else {
+            paquet.addClassToPackage(classe);
+            this.abstractSourcePackageList.add(paquet);
+        }
+    }
+
+    public double getAverageNumberMethodsByClass(){
+        if (this.getNumberOfClass() == 0){return 0.0;}
+        return (double) this.getTotalNumberOfMethods() / this.getNumberOfClass();
+    }
+
+    public int getAverageNumberOfLineByMethods(){
+        int compteurOfMethods = 0;
+        int numberOfLines = 0;
+        for (AbstractSourceClass sourceClass : this.getAbstractSourceClassList()){
+            for (AbstractSourceMethods sourceMethods : sourceClass.getAbstractSourceMethodsList()){
+                compteurOfMethods++;
+                numberOfLines = numberOfLines+sourceMethods.getNumberOfLines();
+            }
+        }
+        return numberOfLines/compteurOfMethods;
+    }
+    public int getAverageNumberOfAttributsByClass(){
+        int compteurAttribut = 0;
+        for (AbstractSourceClass sourceClass : this.getAbstractSourceClassList()){
+            compteurAttribut = compteurAttribut+sourceClass.getAbstractAttributsSourceList().size();
+        }
+        return compteurAttribut/this.getAbstractSourceClassList().size();
+    }
+
+
+
+    public List<AbstractSourceClass> get10percentClassWithMoreMethods() {
+        long sizeOfList = this.getAbstractSourceClassList().size();
+        return this.getAbstractSourceClassList()
+                .stream()
+                .sorted(Comparator.comparingInt(AbstractSourceClass::getNumberOfMethods).reversed())
+                .limit((long) Math.ceil(sizeOfList*0.10))
+                .collect(Collectors.toList());
+    }
+
+    public List<AbstractSourceClass> get10percentClassWithMoreAttributes() {
+        long sizeOfList = this.getAbstractSourceClassList().size();
+        return this.getAbstractSourceClassList()
+                .stream()
+                .sorted(Comparator.comparingInt(AbstractSourceClass::getNumberOfAttributs).reversed())
+                .limit((long) Math.ceil(sizeOfList*0.10))
+                .collect(Collectors.toList());
+    }
+
+    public List<AbstractSourceClass> getImportantClass(){
+        List<AbstractSourceClass> classWithLotMethod = this.get10percentClassWithMoreMethods();
+        List<AbstractSourceClass> classWithLotAttribut = this.get10percentClassWithMoreAttributes();
+
+        List<AbstractSourceClass> importantClass = new ArrayList<AbstractSourceClass>();
+
+        for (AbstractSourceClass sourceClass : classWithLotAttribut){
+            if (classWithLotMethod.contains(sourceClass)) {importantClass.add(sourceClass);};
+        }
+        return importantClass;
+    }
+
+    public List<AbstractSourceClass> getClassesWithMoreThanXMethods(int numberOfMethods){
+        List<AbstractSourceClass> classWithXMethods = new ArrayList<AbstractSourceClass>();
+        for (AbstractSourceClass sourceClass : this.getAbstractSourceClassList()){
+            if (sourceClass.getNumberOfMethods() > numberOfMethods){classWithXMethods.add(sourceClass);}
+        }
+        return classWithXMethods;
+    }
+
+    public List<AbstractSourceMethods> get10PercentOfLargeMethodsByClass(AbstractSourceClass sourceClass){
+        long sizeOfList = sourceClass.getAbstractSourceMethodsList().size();
+        return sourceClass.getAbstractSourceMethodsList()
+                .stream()
+                .sorted(Comparator.comparingInt(AbstractSourceMethods::getNumberOfLines).reversed())
+                .limit((long) Math.ceil(sizeOfList*0.10))
+                .collect(Collectors.toList());
+    }
+
+    public int getMaxNumberOfArgs(){
+        int tmpMax = 0;
+        for (AbstractSourceClass sourceClass : this.getAbstractSourceClassList()){
+            for (AbstractSourceMethods sourceMethods : sourceClass.getAbstractSourceMethodsList()){
+                if (sourceMethods.getParameters().size() > tmpMax){
+                    tmpMax = sourceMethods.getParameters().size();
+                }
+            }
+        }
+        return tmpMax;
+    }
+
+
+    /**
+     * Détermine le package de base du projet analysé en trouvant
+     * le plus long préfixe commun à tous les noms de packages.
+     * @return Le nom du package de base (ex: "com.example.superAppli") ou une chaîne vide.
+     */
+    public String determineBasePackage() {
+        List<String> packageNames = this.getAbstractPackageSourceList().stream()
+                .map(AbstractSourcePackage::getName)
+                .collect(Collectors.toList());
+
+        if (packageNames.isEmpty()) {
+            return "";
+        }
+
+        String longestCommonPrefix = packageNames.get(0);
+        for (int i = 1; i < packageNames.size(); i++) {
+            String currentPackage = packageNames.get(i);
+            while (currentPackage.indexOf(longestCommonPrefix) != 0) {
+                longestCommonPrefix = longestCommonPrefix.substring(0, longestCommonPrefix.length() - 1);
+                if (longestCommonPrefix.isEmpty()) {
+                    return "";
+                }
+            }
+        }
+        if (longestCommonPrefix.endsWith(".")) {
+            longestCommonPrefix = longestCommonPrefix.substring(0, longestCommonPrefix.length() - 1);
+        }
+        return longestCommonPrefix;
+    }
+
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MicroGraph/Edge.java =====
+package um.ico.ingenierie.Analysis.Models.Graph.MicroGraph;
+
+/**
+ *
+ * Cette classe représente les liens entre les différents noeuds
+ *
+ * @author Miguel Delhelle
+ * @version ALPHA_BEFORE_SPRING
+ */
+
+
+public class Edge {
+    public final String calleeSignature;
+    public final EdgeType type;
+
+    public Edge(String calleeSignature, EdgeType type) {
+        this.calleeSignature = calleeSignature;
+        this.type = type;
+    }
+
+    // Nécessaire pour que le Set fonctionne correctement
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Edge edge = (Edge) o;
+        return calleeSignature.equals(edge.calleeSignature) && type == edge.type;
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(calleeSignature, type);
+    }
+
+    @Override
+    public String toString() {
+        return "Edge{" +
+                "calleeSignature='" + calleeSignature + '\'' +
+                ", type=" + type +
+                '}';
+    }
+
+    public String getCalleeSignature() {
+        return calleeSignature;
+    }
+
+    public EdgeType getType() {
+        return type;
+    }
+}
+===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MicroGraph/CallGraph.java =====
+package um.ico.ingenierie.Analysis.Models.Graph.MicroGraph;
+
+import java.util.*;
+
+/**
+ * La classe CallGraph permet de créer un .dot représentant le graphe d'appel
+ *
+ * @author Miguel Delhelle
+ * @version ALPHA_BEFORE_SPRING
+ */
+
+public class CallGraph {
+
+    private final Map<String, Set<Edge>> adjacencyList = new HashMap<>();
+
+    public void addEdge(String callerSignature, String calleeSignature, EdgeType type) {
+        adjacencyList.computeIfAbsent(callerSignature, k -> new HashSet<>());
+        adjacencyList.computeIfAbsent(calleeSignature, k -> new HashSet<>());
+        adjacencyList.get(callerSignature).add(new Edge(calleeSignature, type));
+    }
+
+    public void addEdges(Map<String, Set<Edge>> newEdges) {
+        newEdges.forEach((caller, calleeSet) -> {
+            this.adjacencyList.computeIfAbsent(caller, k -> new HashSet<>())
+                    .addAll(calleeSet);
+        });
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("Graphe d'Appel :\n");
+        for (Map.Entry<String, Set<Edge>> entry : adjacencyList.entrySet()) {
+            sb.append(entry.getKey()).append(" -->\n");
+            for (Edge callee : entry.getValue()) {
+                sb.append("\t- ").append(callee).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    public Map<String, Set<Edge>> getAdjacencyList() {
+        return adjacencyList;
+    }
+
+    public int getNumberOfEdges(){
+        int totalEdges = 0;
+        for (Set<Edge> edges : this.getAdjacencyList().values()){
+            totalEdges = totalEdges + edges.size();
+        };
+        return totalEdges;
+    }
+
+}
+===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MicroGraph/EdgeType.java =====
+package um.ico.ingenierie.Analysis.Models.Graph.MicroGraph;
+
+/**
+ * Cette enumeration représente le type de lien qu'on affiche.
+ *
+ * @author Miguel Delhelle
+ * @version ALPHA_BEFORE_SPRING
+ */
+
+
+public enum EdgeType {
+    CALL,          // Appel de méthode classique
+    INSTANTIATION, // new ...
+    THROWS         // throw new ...
+}
+===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MacroGraph/Coupling/CouplingGraph.java =====
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
+import um.ico.ingenierie.Common.utils.IcoUtils;
+
+import java.util.*;
+
+public class CouplingGraph {
+
+    private static final Logger log = LoggerFactory.getLogger(CouplingGraph.class);
+
+    private CouplingGraph(){
+
+    }
+
+    public static List<PaireClass> CouplingGraph(CallGraph callGraph) {
+
+        //Variables d'entrée
+        String basePackage = IcoUtils.determineBasePackage(callGraph);
+        //int totalEdges = callGraph.getNumberOfEdges();
+        Map<String,Set<Edge>> adjacencyList = callGraph.getAdjacencyList();
+
+        //Numérateur
+        Map<String, PaireClass> lienEntrePairs = new HashMap<>();
+
+        //Dénominateur
+        Map<String, Integer> nbrLienEntreToutesLesClasses = new HashMap<>();
+
+        // Algo
+        for (Map.Entry<String,Set<Edge> > graph : adjacencyList.entrySet()){
+            String callerSignature = graph.getKey(); // Récupération de la clé qui est la signature entière de la classe
+            if (basePackage != null && !basePackage.isEmpty() && !callerSignature.startsWith(basePackage)) {
+                continue;
+            }
+            String classMale = IcoUtils.signatureToQualifiedClassName(callerSignature);
+            Set<Edge> arretes = graph.getValue();
+            int nbrDeLienSortantDeLaClasse = 0;
+
+            for (Edge arrete: arretes){
+
+                String classFemelle = IcoUtils.signatureToQualifiedClassName(arrete.getCalleeSignature());
+
+                if (basePackage != null && !basePackage.isEmpty() && !arrete.getCalleeSignature().startsWith(basePackage)) {
+                    continue;
+                }
+
+                if (!classFemelle.equals(classMale)){
+                    nbrDeLienSortantDeLaClasse++;
+                    PaireClass newCouple = new PaireClass(classMale,classFemelle);
+                    String currentSignatureOfCouple = newCouple.twoSignature();
+
+                    lienEntrePairs.putIfAbsent(currentSignatureOfCouple, newCouple);
+                    if (nbrLienEntreToutesLesClasses.containsKey(classMale)){
+                int valeurActuelle = nbrLienEntreToutesLesClasses.get(classMale);
+                nbrLienEntreToutesLesClasses.put(classMale,valeurActuelle+nbrDeLienSortantDeLaClasse);
+            }
+            else {
+                nbrLienEntreToutesLesClasses.put(classMale,nbrDeLienSortantDeLaClasse);
+            }
+
+                    lienEntrePairs.get(currentSignatureOfCouple).addOneLink();
+                }
+            }
+            if (nbrLienEntreToutesLesClasses.containsKey(classMale)){
+                int valeurActuelle = nbrLienEntreToutesLesClasses.get(classMale);
+                nbrLienEntreToutesLesClasses.put(classMale,valeurActuelle+nbrDeLienSortantDeLaClasse);
+            }
+            else {
+                nbrLienEntreToutesLesClasses.put(classMale,nbrDeLienSortantDeLaClasse);
+            }
+        }
+
+        // Parcours de la Map pour appliquer le taux de couplage.
+        for (PaireClass unePaireDeClass: lienEntrePairs.values()){
+            unePaireDeClass.setCouplage(nbrLienEntreToutesLesClasses);
+        }
+
+        return lienEntrePairs.values().stream().toList();
+    }
+
+    public static List<PaireClass> triSurCouplingScore(List<PaireClass> paireClassNonTrie){
+        if (paireClassNonTrie == null || paireClassNonTrie.isEmpty()) {
+            log.warn("Aucune paire à trier.");
+            return Collections.emptyList();
+        }
+
+        List<PaireClass> listeTriee = new ArrayList<>(paireClassNonTrie);
+
+        listeTriee.sort(Comparator.comparingDouble(PaireClass::getCouplage).reversed());
+
+        log.info("Tri effectué sur le score de couplage (du plus fort au plus faible).");
+
+        return listeTriee;
+    }
+
+
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MacroGraph/Coupling/PaireClass.java =====
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+
+public class PaireClass{
+
+    private static final Logger log = LoggerFactory.getLogger(PaireClass.class);
+
+    public String signClassA;
+    public String signClassB;
+    public int nbrOfLink = 0;
+    public double couplage;
+
+    public PaireClass(String signClassA, String signClassB){
+        if (signClassA.compareTo(signClassB) <= 0) {
+            this.signClassA = signClassA;
+            this.signClassB = signClassB;
+        } else {
+            this.signClassA = signClassB;
+            this.signClassB = signClassA;
+        }
+    }
+
+    public boolean equals(PaireClass that) {
+        return (signClassA.equals(that.signClassA) && signClassB.equals(that.signClassB)) ||
+                (signClassA.equals(that.signClassB) && signClassB.equals(that.signClassA));
+    }
+
+    public String twoSignature(){
+        return "COUPLING_"+this.signClassA + "#"+ this.signClassB;
+    }
+
+    public void addOneLink(){
+        this.nbrOfLink = this.nbrOfLink + 1;
+    }
+
+    @Override
+    public String toString(){
+        return couplage+"-"+twoSignature();
+    }
+
+    public void setCouplage(Map<String,Integer> nbrLiensToutesLesClasses) {
+        int nbrLienClassA = nbrLiensToutesLesClasses.getOrDefault(signClassA,0);
+        int nbrLienClassB = nbrLiensToutesLesClasses.getOrDefault(signClassB,0);
+        log.info("NbrLink: "+nbrOfLink+" du couple: "+signClassA+"#"+signClassB);
+        double totalLienDesDeuxClasses = nbrLienClassA+nbrLienClassB;
+        log.info("NbrLiendeLaClass"+signClassA+" : "+nbrLienClassA);
+        log.info("NbrLiendeLaClass"+signClassB+" : "+nbrLienClassB);
+        log.info("Total des liens sortants des deux classes du couple"+totalLienDesDeuxClasses);
+        this.couplage = (double) nbrOfLink/ totalLienDesDeuxClasses;
+        log.info("Couplage du couple: "+this.couplage);
+    }
+
+    public String getSignClassA() {
+        return signClassA;
+    }
+
+    public String getSignClassB() {
+        return signClassB;
+    }
+
+    public int getNbrOfLink() {
+        return nbrOfLink;
+    }
+
+    public double getCouplage() {
+        return couplage;
+    }
+}
+===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MacroGraph/Dendro/DendroNode.java =====
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro;
+
+import java.util.Set;
+
+public class DendroNode {
+
+    private DendroNode leftChild;
+    private DendroNode rightChild;
+
+    private double hauteurCoupling;
+
+    private String className;
+
+    //Conteneur final
+    // On utilise Set pour avoir des éléments unique et non ordonnées
+    private Set<String> classContenu;
+
+    // Constructeur vide protégé pour peut être des itérations plus tard avec des librarie comme JPA Hibernate
+    // Qui en nécessite par défaut
+    protected DendroNode(){};
+
+    // Constructeur pour les Noeuds feuille
+    public DendroNode(String className){
+        this.leftChild = null;
+        this.rightChild = null;
+        this.hauteurCoupling = 0.0;
+        this.className = className;
+    }
+
+    //Constructeur pour les noeuds représentant les fusions entre deux noeuds
+
+    public DendroNode(DendroNode child1, DendroNode child2, double couplingValue){
+        this.leftChild = child1;
+        this.rightChild = child2;
+        this.hauteurCoupling = couplingValue;
+        //TODO METTRE TOUTES LES CLASSES dans un noeud pour l'algo DENDOGRAMME
+    }
+
+    public boolean isLeaf(){
+        if (className == null){return true;}
+        else {return false;}
+    }
+
+
+    public DendroNode getLeftChild() {
+        return leftChild;
+    }
+
+    public DendroNode getRightChild() {
+        return rightChild;
+    }
+
+    public double getHauteurCoupling() {
+        return hauteurCoupling;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public Set<String> getClassContenu() {
+        return classContenu;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MacroGraph/Dendro/Dendrogramme.java =====
+package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro;
+
+public class Dendrogramme {
+
+
+    public Dendrogramme(){
+    }
+
+//
+//    public static Set<DendoNode> constructDendo(List<PaireClass> listCoupling){
+//        List<PaireClass> classListTrie = CouplingGraph.triSurCouplingScore(listCoupling);
+//        for (PaireClass paireClass: classListTrie){
+//            Se
+//        }
+//
+//    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Result/SingleFileAnalysisResult.java =====
+package um.ico.ingenierie.Analysis.Result;
+
+import um.ico.ingenierie.Analysis.Models.SourceCode.AbstractSourceClass;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+public class SingleFileAnalysisResult {
+
+    AbstractSourceClass foundClass = new AbstractSourceClass();
+    Map<String, Set<Edge>> foundEdges = new HashMap<>();
+
+    public SingleFileAnalysisResult() {
+    }
+
+    public SingleFileAnalysisResult(AbstractSourceClass foundClass, Map<String, Set<Edge>> foundEdges) {
+        this.foundClass = foundClass;
+        this.foundEdges = foundEdges;
+    }
+
+    public Map<String, Set<Edge>> getFoundEdges() {
+        return foundEdges;
+    }
+
+    public void setFoundEdges(Map<String, Set<Edge>> foundEdges) {
+        this.foundEdges = foundEdges;
+    }
+
+    public AbstractSourceClass getFoundClass() {
+        return foundClass;
+    }
+
+    public void setFoundClass(AbstractSourceClass foundClass) {
+        this.foundClass = foundClass;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Analysis/Service/AnalysisService.java =====
+package um.ico.ingenierie.Analysis.Service;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import um.ico.ingenierie.Analysis.CodeAnalyzer;
+import um.ico.ingenierie.Api.Response.AnalysisResponse;
+import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
+
+import java.io.IOException;
+
+@Service
+public class AnalysisService {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalysisService.class);
+
+
+   public AnalysisResponse analyzeProject(IJavaFilesHandler javaFilesHandler) throws IOException{
+        log.info("Le service d'analyse est appelé pour", javaFilesHandler);
+        //System.out.println(javaFilesHandler.javaToString());
+        CodeAnalyzer ca = new CodeAnalyzer(javaFilesHandler);
+        return ca.analyze();
+    }
+
+}
+
+===== ./main/java/um/ico/ingenierie/Common/utils/IcoUtils.java =====
+package um.ico.ingenierie.Common.utils;
+
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public final class IcoUtils {
+
+    public static String createMethodSignature(IMethodBinding binding) {
+        if (binding == null) return "unknown.binding";
+
+        StringBuilder signature = new StringBuilder();
+        ITypeBinding declaringClass = binding.getDeclaringClass();
+        if (declaringClass == null || declaringClass.getQualifiedName().isEmpty()) {
+            return "local.class#" + binding.getName();
+        }
+        signature.append(declaringClass.getErasure().getQualifiedName());
+        signature.append("#");
+        signature.append(binding.getName());
+        signature.append("(");
+
+        ITypeBinding[] parameters = binding.getParameterTypes();
+        for (int i = 0; i < parameters.length; i++) {
+            signature.append(parameters[i].getErasure().getQualifiedName());
+            if (i < parameters.length - 1) {
+                signature.append(",");
+            }
+        }
+        signature.append(")");
+        return signature.toString();
+    }
+
+    public static String simplifySignature(String signature) {
+        String[] parts = signature.split("#");
+        String classAndPackage = parts[0];
+        String methodNameAndParams = parts.length > 1 ? parts[1] : "";
+
+        String className = classAndPackage.substring(classAndPackage.lastIndexOf('.') + 1);
+
+        // On remplace les longs noms de paramètres par "..." pour la clarté
+        return className + "#" + methodNameAndParams.replaceAll("\\(.*\\)", "(...)");
+    }
+
+    public static String signatureToNameOfClass(String signature) {
+        if (signature.isEmpty()){return "";}
+        String result = "";
+        String afterHash = signature.split("#")[0];
+        String[] tabResult = afterHash.split("\\.");
+        result = tabResult[tabResult.length-1];
+        return result;
+    }
+
+    /**
+     * Détermine le package de base du projet analysé à partir d'un CallGraph
+     * en trouvant le plus long préfixe commun à tous les noms de classes.
+     * @param callGraph L'objet contenant le graphe d'appel.
+     * @return Le nom du package de base (ex: "com.example.superAppli") ou une chaîne vide.
+     */
+    public static String determineBasePackage(CallGraph callGraph) {
+        // 1. Extraire tous les noms de classes uniques des clés du graphe d'appel.
+        //    On utilise un Set pour garantir l'unicité et la performance.
+        List<String> classNames = callGraph.getAdjacencyList().keySet().stream()
+                .map(signature -> signature.split("#")[0]) // Extrait le nom de la classe de la signature
+                .distinct() // Garde uniquement les noms de classes uniques
+                .collect(Collectors.toList());
+
+        if (classNames.isEmpty()) {
+            return "";
+        }
+
+        // 2. L'algorithme du plus long préfixe commun reste identique.
+        String longestCommonPrefix = classNames.get(0);
+        for (int i = 1; i < classNames.size(); i++) {
+            String currentClassName = classNames.get(i);
+            while (!currentClassName.startsWith(longestCommonPrefix)) {
+                // On retire le dernier segment (après le dernier point)
+                int lastDot = longestCommonPrefix.lastIndexOf('.');
+                if (lastDot == -1) {
+                    return ""; // Pas de préfixe commun
+                }
+                longestCommonPrefix = longestCommonPrefix.substring(0, lastDot);
+            }
+        }
+
+        // On a trouvé le préfixe commun le plus long, qui est notre package de base.
+        return longestCommonPrefix;
+    }
+
+    /**
+     * Surcharge de la méthode determineBasePackage.
+     * Détermine le package de base du projet à partir d'une collection de PaireClass
+     * en trouvant le plus long préfixe commun à tous les noms de classes impliquées.
+     *
+     * GENERATED BY GEMINI PRO 2.5
+     * @param couplingPairs La collection des objets PaireClass résultant de l'analyse de couplage.
+     * @return Le nom du package de base (ex: "um.ico.ingenierie") ou une chaîne vide.
+     */
+    public static String determineBasePackage(Collection<PaireClass> couplingPairs) {
+        if (couplingPairs == null || couplingPairs.isEmpty()) {
+            return "";
+        }
+
+        // 1. Extraire tous les noms de classes uniques des paires.
+        // On utilise un Stream pour aplatir les paires et collecter tous les noms.
+        // On utilise un Set pour garantir l'unicité automatiquement et efficacement.
+        Set<String> classNames = couplingPairs.stream()
+                .flatMap(pair -> Stream.of(pair.signClassA, pair.signClassB))
+                .filter(Objects::nonNull) // Sécurité pour éviter les NullPointerException
+                .collect(Collectors.toSet());
+
+        if (classNames.isEmpty()) {
+            return "";
+        }
+
+        // Convertir le Set en List pour pouvoir accéder au premier élément.
+        List<String> classNamesList = new ArrayList<>(classNames);
+
+        // 2. L'algorithme du plus long préfixe commun reste identique.
+        String longestCommonPrefix = classNamesList.get(0);
+        // On s'assure de partir d'un nom de package et non d'une classe complète.
+        if (longestCommonPrefix.contains(".")) {
+            longestCommonPrefix = longestCommonPrefix.substring(0, longestCommonPrefix.lastIndexOf('.'));
+        }
+
+        for (String currentClassName : classNamesList) {
+            while (!currentClassName.startsWith(longestCommonPrefix)) {
+                int lastDot = longestCommonPrefix.lastIndexOf('.');
+                if (lastDot == -1) {
+                    return ""; // Pas de préfixe commun, on retourne une chaîne vide.
+                }
+                longestCommonPrefix = longestCommonPrefix.substring(0, lastDot);
+            }
+        }
+
+        return longestCommonPrefix;
+    }
+
+
+
+    public static String signatureToQualifiedClassName(String signature) {
+        if (signature == null || signature.isEmpty()) {
+            return "";
+        }
+        int hashIndex = signature.indexOf('#');
+        if (hashIndex == -1) {
+            // Pas de '#', on suppose que c'est déjà un nom de classe ou invalide
+            return signature;
+        }
+        return signature.substring(0, hashIndex);
+    }
+
+    public static Set<String> getAllClass_From(List<PaireClass> paireClassList, boolean withBasePackage_NotExternal){
+        Set<String> setDeClass = new TreeSet<>();
+        String basePackage;
+
+        for (PaireClass paireClass: paireClassList){
+            setDeClass.add(paireClass.getSignClassA());
+            setDeClass.add(paireClass.getSignClassB());
+
+        }
+        if (withBasePackage_NotExternal){
+            basePackage = determineBasePackage(paireClassList);
+            setDeClass = setDeClass.stream()
+                    .filter(str -> str.startsWith(basePackage))
+                    .collect(Collectors.toSet());
+        } else {
+            basePackage = null;
+        }
+
+
+        System.out.println(setDeClass);
+        return setDeClass;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Common/Exceptions/NoValidZipJavaSourceFilesException.java =====
+package um.ico.ingenierie.Common.Exceptions;
+
+public class NoValidZipJavaSourceFilesException extends RuntimeException {
+
+    public NoValidZipJavaSourceFilesException(){
+        super("L'archive Zip ne contient pas de fichier Java, ou est corrompue");
+    }
+
+    public NoValidZipJavaSourceFilesException(String message) {
+        super(message);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Common/Exceptions/NoValidGitRemoteUriException.java =====
+package um.ico.ingenierie.Common.Exceptions;
+
+public class NoValidGitRemoteUriException extends RuntimeException {
+
+    public NoValidGitRemoteUriException() {
+        super("Pas de répertoire git valide");
+    }
+
+    public NoValidGitRemoteUriException(String message) {
+        super(message);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Common/Exceptions/NoMetricsDataException.java =====
+package um.ico.ingenierie.Common.Exceptions;
+
+/**
+ * Exception levée si un objet MetricsData n'est pas renseignée.
+ * L'exception ne peut pas être levée par le comportemetn de l'utilisateur.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+public class NoMetricsDataException extends RuntimeException {
+
+    public NoMetricsDataException(){
+        super("Le metrics data n'existe pas");
+    }
+
+    public NoMetricsDataException(String message) {
+        super(message);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Common/Exceptions/NoCompilationUnitExceptions.java =====
+package um.ico.ingenierie.Common.Exceptions;
+
+/**
+ * Exception levée si les objets de compilationUnit n'existe pas.
+ * L'exception ne peut logiquement pas être levée par le comportement d'un utilisateur.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+public class NoCompilationUnitExceptions extends RuntimeException {
+
+    public NoCompilationUnitExceptions(){super("Aucune compilation Unit n'a été renseigné");}
+
+    public NoCompilationUnitExceptions(String message) {
+        super(message);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Common/Exceptions/NoJavaPathExceptions.java =====
+package um.ico.ingenierie.Common.Exceptions;
+
+import java.io.IOException;
+import java.nio.file.Path;
+
+/**
+ * Exception levée dans le cas ou le Path indiqué
+ * ne correspond pas à un répertoire Java.
+ *
+ * L'exception peut être levée si l'utilisateur rentre un mauvais path.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+public class NoJavaPathExceptions extends IOException {
+
+    Path leChemin;
+
+    public NoJavaPathExceptions(){
+        super("Le chemin indiqué ne correspond pas à du code Java");
+    }
+    public NoJavaPathExceptions(Path leChemin) {
+        super ("Erreur, le chemin: "+leChemin.toString()+" ne correspond pas à du code Java, relancez le programme");
+        this.leChemin = leChemin;
+    }
+
+    public NoJavaPathExceptions(String message, Path leChemin) {
+        super(message);
+        this.leChemin = leChemin;
+    }
+
+    public NoJavaPathExceptions(String message, Throwable cause, Path leChemin) {
+        super(message, cause);
+        this.leChemin = leChemin;
+    }
+
+    public NoJavaPathExceptions(Throwable cause, Path leChemin) {
+        super(cause);
+        this.leChemin = leChemin;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Common/results/SearchResult.java =====
+package um.ico.ingenierie.Common.results;
+
+/**
+ * Cette classe sert à pouvoir retourner plusieurs informations après le parcours d'une boucle.
+ * En l'occurence elle est utilisé ici pour vérifier l'existence dans une liste ainsi que la position de l'objet trouvée.
+ *
+ * @author Miguel Delhelle
+ * @version 1.0
+ */
+
+public class SearchResult {
+
+    private boolean exist = false;
+    private int position = -1;
+
+    public SearchResult(boolean exist, int position) {
+        this.exist = exist;
+        this.position = position;
+    }
+
+    public boolean isExist() {
+        return exist;
+    }
+
+    public void setExist(boolean exist) {
+        this.exist = exist;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Api/Controllers/AnalysisController.java =====
+package um.ico.ingenierie.Api.Controllers;
+
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import um.ico.ingenierie.Analysis.Service.AnalysisService;
+import um.ico.ingenierie.Api.Request.GitAnalysisRequest;
+import um.ico.ingenierie.Api.Response.AnalysisResponse;
+import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
+import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerGit;
+import um.ico.ingenierie.JavaFilesHandler.JavaFilesHandlerZip;
+
+import java.io.IOException;
+
+@RestController
+@RequestMapping("/api/analyses")
+@CrossOrigin(origins = "http://localhost:5173")
+public class AnalysisController {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalysisController.class);
+    private final AnalysisService analysisService;
+
+    public AnalysisController(AnalysisService analysisService) {
+        this.analysisService = analysisService;
+    }
+
+    @PostMapping("/zip")
+    public ResponseEntity<AnalysisResponse> analyzeZip(@RequestParam("file") MultipartFile file) throws IOException {
+        log.info("Requête reçue sur /zip pour le fichier : {}", file.getOriginalFilename());
+        IJavaFilesHandler gestionFiles = new JavaFilesHandlerZip(file);
+        AnalysisResponse results = analysisService.analyzeProject(gestionFiles);
+        return ResponseEntity.ok(results);
+    }
+
+    @PostMapping("/git")
+    public ResponseEntity<AnalysisResponse> analyzeGit(@RequestBody GitAnalysisRequest request) throws GitAPIException, IOException {
+        log.info("Requête reçue sur /git pour l'URL : {}", request.uriGit());
+        IJavaFilesHandler gestionFiles = new JavaFilesHandlerGit(request.uriGit());
+        AnalysisResponse results = analysisService.analyzeProject(gestionFiles);
+        return ResponseEntity.ok(results);
+    }
+
+
+//    @Deprecated(since = "plus utile")
+//    private AnalysisResponse createAnalysisResponse(CodeAnalyzer results) {
+//        MetricsDto metricsDto = MetricsDto.from(results.getMetricsData());
+//        results.getMetricsData().determineBasePackage();
+//        GraphDTO graphDto = GraphDTO.from(results.getCallGraph(), results.getMetricsData(),true);
+//        return new AnalysisResponse(metricsDto, graphDto);
+//    }
+}
+===== ./main/java/um/ico/ingenierie/Api/Response/AnalysisResponse.java =====
+package um.ico.ingenierie.Api.Response;
+
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Api.DTO.GraphCouplingDTO;
+import um.ico.ingenierie.Api.DTO.GraphDTO;
+import um.ico.ingenierie.Api.DTO.MetricsDto;
+
+public record AnalysisResponse(MetricsDto metricsDto, GraphDTO graphDTO, String basePackage, GraphCouplingDTO treeCoupling) {
+    public static AnalysisResponse from(MetricsData metricsData, CallGraph graphAppel) {
+
+        MetricsDto metricsDto1 = MetricsDto.from(metricsData);
+        GraphDTO callGraph = GraphDTO.from(graphAppel);
+        String basePackage = metricsData.determineBasePackage();
+        //Map<String, PaireClass> treeCouplingMap = CouplingService.TreeCoupling(graphAppel) ;
+
+        GraphCouplingDTO treeCoupling = GraphCouplingDTO.from(graphAppel);
+
+
+        return new AnalysisResponse(metricsDto1,callGraph,basePackage,treeCoupling);
+    }
+}
+
+
+===== ./main/java/um/ico/ingenierie/Api/Request/GitAnalysisRequest.java =====
+package um.ico.ingenierie.Api.Request;
+
+public record GitAnalysisRequest(String uriGit) {
+
+}
+
+===== ./main/java/um/ico/ingenierie/Api/DTO/PaireClassDTO.java =====
+package um.ico.ingenierie.Api.DTO;
+
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
+
+public record PaireClassDTO(String classA, String classB, int nbrOfLink, double coupling) {
+
+    public static PaireClassDTO from(PaireClass paireClass){
+        return new PaireClassDTO(paireClass.getSignClassA(), paireClass.getSignClassB(), paireClass.getNbrOfLink(), paireClass.getCouplage());
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Api/DTO/GraphDTO.java =====
+package um.ico.ingenierie.Api.DTO;
+
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
+
+import java.util.Map;
+import java.util.Set;
+
+public record GraphDTO(Map<String, Set<Edge>> adjacencyList) {
+
+    /**
+     * Factory method pour créer le DTO à partir des résultats de l'analyse.
+     * @param callGraph L'objet CallGraph contenant la structure du graphe.
+     * @return Une nouvelle instance de GraphDotDto.
+     */
+    public static GraphDTO from(CallGraph callGraph) {
+        return new GraphDTO(callGraph.getAdjacencyList());
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Api/DTO/GraphCouplingDTO.java =====
+package um.ico.ingenierie.Api.DTO;
+
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Common.utils.IcoUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public record GraphCouplingDTO(List<PaireClassDTO> graphCoupling) {
+
+    public static GraphCouplingDTO from(CallGraph callGraph){
+
+        List<PaireClass> arbreCouplageNoDTO = CouplingGraph.CouplingGraph(callGraph);
+
+        System.out.println(IcoUtils.getAllClass_From(arbreCouplageNoDTO,true));
+        List<PaireClassDTO> graphcouplageDTO = new ArrayList<>();
+        arbreCouplageNoDTO.forEach((value) -> {
+            graphcouplageDTO.add(PaireClassDTO.from(value));
+        });
+        System.out.println(graphcouplageDTO);
+
+        return new GraphCouplingDTO(graphcouplageDTO);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Api/DTO/MetricsDto.java =====
+package um.ico.ingenierie.Api.DTO;
+
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+
+public record MetricsDto(
+        int numberOfPackage,
+        int numberOfClasses,
+        int totalNummberOfMethods,
+        int totalNumberOfLines,
+        double averageMethodsPerClass,
+        double averageLinesPerMethods,
+        double averageAttributesPerclass
+        ){
+
+    public static MetricsDto from(MetricsData metricsData){
+        return new MetricsDto(
+                metricsData.getNumberOfPackage(),
+                metricsData.getNumberOfClass(),
+                metricsData.getTotalNumberOfMethods(),
+                metricsData.getTotalNumberOfLines(),
+                metricsData.getAverageNumberMethodsByClass(),
+                metricsData.getAverageNumberOfLineByMethods(),
+                metricsData.getAverageNumberOfAttributsByClass()
+        ); //TODO Trouvez un moyen pour renvoyez les objets complexes "AbstractSourceClass"
+    }
+}

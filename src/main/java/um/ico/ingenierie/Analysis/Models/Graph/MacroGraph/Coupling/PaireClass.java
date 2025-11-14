@@ -3,6 +3,9 @@ package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 public class PaireClass{
@@ -54,6 +57,18 @@ public class PaireClass{
         log.info("Couplage du couple: "+this.couplage);
     }
 
+    public boolean contains(String nameOfClass){
+        if (this.getSignClassA().equals(nameOfClass)){
+            return true;
+        }
+        else if (this.getSignClassB().equals(nameOfClass)){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
     public String getSignClassA() {
         return signClassA;
     }
@@ -68,5 +83,24 @@ public class PaireClass{
 
     public double getCouplage() {
         return couplage;
+    }
+    public String getOtherClass(String className){
+        if (className.equals(signClassA)){
+            return signClassB;
+        }else if (className.equals(signClassB)){
+            return signClassA;
+        }else {
+            return null;
+        }
+    }
+
+    public static List<PaireClass> toutLesCouplesDe(String nameOfClass, Collection<PaireClass> inCollection){
+        List<PaireClass> listDeCoupleOfThatClass = new ArrayList<PaireClass>();
+        for (PaireClass paireClass : inCollection){
+            if (paireClass.contains(nameOfClass)){
+                listDeCoupleOfThatClass.add(paireClass);
+            }
+        }
+        return listDeCoupleOfThatClass;
     }
 }
