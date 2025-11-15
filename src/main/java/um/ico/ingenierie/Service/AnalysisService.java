@@ -6,8 +6,8 @@ import org.springframework.stereotype.Service;
 import um.ico.ingenierie.Analysis.CodeAnalyzer;
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
-import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.DendroGramme;
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.DendroNode;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.Dendrogramme;
 import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
 import um.ico.ingenierie.Analysis.Result.CodeAnalyzerResult;
@@ -39,7 +39,7 @@ public class AnalysisService {
        List<PaireClass> arbreCouplageNoDTO = CouplingGraph.CouplingGraph(callGraph);
 
 
-       DendroNode rootDendro = DendroGramme.buildDendroGramme(arbreCouplageNoDTO);
+       DendroNode rootDendro = Dendrogramme.construct(arbreCouplageNoDTO);
        String basePackage = IcoUtils.determineBasePackage(arbreCouplageNoDTO);
 
        //init DTO

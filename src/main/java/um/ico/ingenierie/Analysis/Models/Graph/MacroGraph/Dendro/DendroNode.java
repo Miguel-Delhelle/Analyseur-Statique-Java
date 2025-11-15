@@ -1,165 +1,63 @@
 package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro;
 
-import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
-import um.ico.ingenierie.Common.utils.IcoUtils;
-import um.ico.ingenierie.Common.utils.PairNormalisation;
-
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public class DendroNode{
+public final class DendroNode {
 
-    private DendroNode leftChild;
-    private DendroNode rightChild;
-    //private DendroNode parent = null;
+    private final DendroNode leftChild;
+    private final DendroNode rightChild;
+    private final double hauteurCoupling;
+    private final String className; // Non-null SEULEMENT pour les feuilles
+    private final Set<String> classContenu;
 
-    private double hauteurCoupling;
-
-    private String className;
-
-    //Conteneur final
-    // On utilise Set pour avoir des éléments unique et non ordonnées
-    //private Set<String> classContenu;
-
-    // Constructeur vide protégé pour peut être des itérations plus tard avec des librarie comme JPA Hibernate
-    // Qui en nécessite par défaut
-    protected DendroNode(){};
-
-    // Constructeur pour les Noeuds feuille
-    public DendroNode(String className){
+    public DendroNode(String className) {
+        if (className == null || className.isEmpty()) {
+            throw new IllegalArgumentException("Le nom de la classe ne peut pas être nul ou vide pour une feuille.");
+        }
         this.leftChild = null;
         this.rightChild = null;
-        this.hauteurCoupling = 1.0;
+        this.hauteurCoupling = 0.0;
         this.className = className;
+        this.classContenu = Collections.singleton(className);
     }
 
-    //Root DendroNode
-
-    //Constructeur pour les noeuds représentant les fusions entre deux noeuds
-
     public DendroNode(DendroNode child1, DendroNode child2, double couplingValue) {
+        if (child1 == null || child2 == null) {
+            throw new IllegalArgumentException("Les enfants d'un nœud de fusion ne peuvent pas être nuls.");
+        }
         this.leftChild = child1;
         this.rightChild = child2;
         this.hauteurCoupling = couplingValue;
-
-        //Identique à PairClass, essentiel au bon fonctionnement
-        String[] ordered = PairNormalisation.normalizePair(child1.className, child2.className);
-        this.className = ""+ordered[0] + "#" + ordered[1];
+        this.className = null; // UN NOEUD DE FUSION N'A PAS DE NOM DE CLASSE
+        this.classContenu = new HashSet<>(child1.getClassContenu());
+        this.classContenu.addAll(child2.getClassContenu());
     }
 
+    // LA DÉFINITION CORRECTE DE "isLeaf"
     public boolean isLeaf() {
-        return leftChild == null && rightChild == null;
+        return this.className != null;
     }
 
-
-    public DendroNode getLeftChild() {
-        return leftChild;
-    }
-
-    public DendroNode getRightChild() {
-        return rightChild;
-    }
-
-    public double getHauteurCoupling() {
-        return hauteurCoupling;
-    }
-
-    public String getClassName() {
-        return className;
-    }
+    // --- GETTERS ---
+    public DendroNode getLeftChild() { return leftChild; }
+    public DendroNode getRightChild() { return rightChild; }
+    public double getHauteurCoupling() { return hauteurCoupling; }
+    public String getClassName() { return className; }
+    public Set<String> getClassContenu() { return classContenu; }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DendroNode)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
         DendroNode that = (DendroNode) o;
-
-        if (isLeaf() && that.isLeaf()) {
-            return Objects.equals(className, that.className);
-        }
-
-        if (!isLeaf() && !that.isLeaf()) {
-            // ordre indépendant
-            return (Objects.equals(leftChild, that.leftChild) && Objects.equals(rightChild, that.rightChild)) ||
-                    (Objects.equals(leftChild, that.rightChild) && Objects.equals(rightChild, that.leftChild));
-        }
-
-        return false;
+        return classContenu.equals(that.classContenu);
     }
 
     @Override
     public int hashCode() {
-        if (isLeaf()) {
-            return Objects.hash(className);
-        }
-
-        // ordre indépendant et plus robuste que +
-        int h1 = leftChild.hashCode();
-        int h2 = rightChild.hashCode();
-        return h1 ^ h2; // XOR = commutatif
-    }
-
-    public int couplingInProportion(){
-        double tmp = this.hauteurCoupling*100.0;
-        return (int) tmp;
-    }
-
-    @Override
-    public String toString() {
-        return "DendroNode{" +
-                "leftChild=" + leftChild +
-                ", rightChild=" + rightChild +
-                ", hauteurCoupling=" + hauteurCoupling +
-                ", className='" + className + '\'' +
-                ", isLeaf=" + isLeaf() +
-                '}';
-    }
-
-    //Generated by ChatGpt 4.5 (OpenAI)
-    public boolean containsClass(String name) {
-        // 1) Si c'est une feuille → on compare directement son nom
-        if (this.isLeaf()) {
-            return this.className.equals(name);
-        }
-        boolean leftContains = false;
-        boolean rightContains = false;
-
-        if (leftChild != null) {
-            leftContains = leftChild.containsClass(name);
-        }
-        if (rightChild != null) {
-            rightContains = rightChild.containsClass(name);
-        }
-
-        return leftContains || rightContains;
-    }
-    //Generated by ChatGpt 4.5 (OpenAI)
-    /**
-     * Retourne la concaténation de tous les className des feuilles du sous-arbre.
-     */
-    public List<String> getAllClassNames() {
-        List<String> sb = new ArrayList<>();
-        collectClassNames(sb);
-        return sb;
-    }
-
-    //Generated by ChatGpt 4.5 (OpenAI)
-    /**
-     * Méthode récursive privée qui remplit le StringBuilder avec les className.
-     */
-    private void collectClassNames(List<String> sb) {
-        if (this.isLeaf()) {
-            sb.add(this.className);
-            return;
-        }
-
-        if (leftChild != null) {
-            leftChild.collectClassNames(sb);
-        }
-        if (rightChild != null) {
-            rightChild.collectClassNames(sb);
-        }
+        return Objects.hash(classContenu);
     }
 }

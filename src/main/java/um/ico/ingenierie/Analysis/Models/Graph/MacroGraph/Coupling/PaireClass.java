@@ -2,7 +2,6 @@ package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import um.ico.ingenierie.Common.utils.PairNormalisation;
 
 import java.util.*;
 
@@ -15,42 +14,14 @@ public class PaireClass{
     public int nbrOfLink = 0;
     public double couplage;
 
-    public PaireClass(String signClassA, String signClassB) {
-        String[] ordered = PairNormalisation.normalizePair(signClassA, signClassB);
-        this.signClassA = ordered[0];
-        this.signClassB = ordered[1];
-    }
-
-    public PaireClass(String signClassA, String signClassB,double couplage) {
-        String[] ordered = PairNormalisation.normalizePair(signClassA, signClassB);
-        this.signClassA = ordered[0];
-        this.signClassB = ordered[1];
-        this.couplage = couplage;
-    }
-
-    // --- FIXED VERSION ---
-    public void merged(String classA, String classB) {
-        String merged = "CLUSTER" + String.join("#", PairNormalisation.normalizePair(classA, classB));
-
-        if (signClassA.equals(classA) || signClassA.equals(classB)) {
-            signClassA = merged;
+    public PaireClass(String signClassA, String signClassB){
+        if (signClassA.compareTo(signClassB) <= 0) {
+            this.signClassA = signClassA;
+            this.signClassB = signClassB;
+        } else {
+            this.signClassA = signClassB;
+            this.signClassB = signClassA;
         }
-        if (signClassB.equals(classA) || signClassB.equals(classB)) {
-            signClassB = merged;
-        }
-        normalize();
-    }
-
-    // --- FIXED VERSION ---
-    public void merged(PaireClass that) {
-        merged(that.signClassA, that.signClassB);
-    }
-
-    // always maintain canonical ordering after modifications
-    private void normalize() {
-        String[] ordered = PairNormalisation.normalizePair(this.signClassA, this.signClassB);
-        this.signClassA = ordered[0];
-        this.signClassB = ordered[1];
     }
 
     @Override
