@@ -1,6 +1,8 @@
 package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro;
 
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
+import um.ico.ingenierie.Common.utils.IcoUtils;
+import um.ico.ingenierie.Common.utils.PairNormalisation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,22 +39,19 @@ public class DendroNode{
 
     //Constructeur pour les noeuds représentant les fusions entre deux noeuds
 
-    public DendroNode(DendroNode child1, DendroNode child2, double couplingValue){
+    public DendroNode(DendroNode child1, DendroNode child2, double couplingValue) {
         this.leftChild = child1;
         this.rightChild = child2;
         this.hauteurCoupling = couplingValue;
-        //TODO METTRE TOUTES LES CLASSES dans un noeud pour l'algo DENDOGRAMME
+
+        //Identique à PairClass, essentiel au bon fonctionnement
+        String[] ordered = PairNormalisation.normalizePair(child1.className, child2.className);
+        this.className = ""+ordered[0] + "#" + ordered[1];
     }
 
     public boolean isLeaf() {
-        // Une feuille EST DÉFINIE par le fait d'avoir un nom de classe.
-        // Un nœud interne (une fusion de clusters) n'en a pas.
-        return this.className != null;
+        return leftChild == null && rightChild == null;
     }
-
-//    public DendroNode from(PaireClass paireClass){
-//        return new DendroNode(paireClass.getSignClassA(),paireClass.getSignClassB(),paireClass.getCouplage());
-//    }
 
 
     public DendroNode getLeftChild() {
@@ -74,40 +73,37 @@ public class DendroNode{
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof DendroNode)) return false;
         DendroNode that = (DendroNode) o;
 
-        // Si l'un est une feuille et l'autre non, ils sont différents.
-        if (this.isLeaf() != that.isLeaf()) {
-            return false;
+        if (isLeaf() && that.isLeaf()) {
+            return Objects.equals(className, that.className);
         }
 
-        if (isLeaf()) {
-            // Pour les feuilles, on compare le nom de la classe.
-            return Objects.equals(className, that.className);
-        } else {
-            // Pour les nœuds internes, on compare les enfants, peu importe l'ordre.
-            // (A, B) est égal à (B, A).
-            return (leftChild.equals(that.leftChild) && rightChild.equals(that.rightChild)) ||
-                    (leftChild.equals(that.rightChild) && rightChild.equals(that.leftChild));
+        if (!isLeaf() && !that.isLeaf()) {
+            // ordre indépendant
+            return (Objects.equals(leftChild, that.leftChild) && Objects.equals(rightChild, that.rightChild)) ||
+                    (Objects.equals(leftChild, that.rightChild) && Objects.equals(rightChild, that.leftChild));
         }
+
+        return false;
     }
 
-    /**
-     * Le hashCode doit être cohérent avec equals.
-     * Si equals est vrai, les hashCodes doivent être identiques.
-     */
     @Override
     public int hashCode() {
         if (isLeaf()) {
-            // Le hashCode d'une feuille est basé sur son nom.
             return Objects.hash(className);
-        } else {
-            // Pour un nœud interne, on utilise une opération commutative (addition ou XOR)
-            // sur les hashCodes des enfants pour que l'ordre n'importe pas.
-            // (A, B) aura le même hashCode que (B, A).
-            return leftChild.hashCode() + rightChild.hashCode();
         }
+
+        // ordre indépendant et plus robuste que +
+        int h1 = leftChild.hashCode();
+        int h2 = rightChild.hashCode();
+        return h1 ^ h2; // XOR = commutatif
+    }
+
+    public int couplingInProportion(){
+        double tmp = this.hauteurCoupling*100.0;
+        return (int) tmp;
     }
 
     @Override
@@ -127,8 +123,6 @@ public class DendroNode{
         if (this.isLeaf()) {
             return this.className.equals(name);
         }
-
-        // 2) Sinon, on descend dans les enfants
         boolean leftContains = false;
         boolean rightContains = false;
 
