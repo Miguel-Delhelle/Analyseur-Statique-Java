@@ -11,7 +11,7 @@ public class DendroNode{
 
     private DendroNode leftChild;
     private DendroNode rightChild;
-    private DendroNode parent = null;
+    //private DendroNode parent = null;
 
     private double hauteurCoupling;
 
@@ -19,7 +19,7 @@ public class DendroNode{
 
     //Conteneur final
     // On utilise Set pour avoir des éléments unique et non ordonnées
-    private Set<String> classContenu;
+    //private Set<String> classContenu;
 
     // Constructeur vide protégé pour peut être des itérations plus tard avec des librarie comme JPA Hibernate
     // Qui en nécessite par défaut
@@ -53,17 +53,7 @@ public class DendroNode{
 //    public DendroNode from(PaireClass paireClass){
 //        return new DendroNode(paireClass.getSignClassA(),paireClass.getSignClassB(),paireClass.getCouplage());
 //    }
-    public DendroNode getParent(){
-        return this.parent;
-    }
 
-    public boolean hasParent(){
-        if (this.getParent() == null){
-            return false;
-        } else {
-            return true;
-        }
-    }
 
     public DendroNode getLeftChild() {
         return leftChild;
@@ -79,10 +69,6 @@ public class DendroNode{
 
     public String getClassName() {
         return className;
-    }
-
-    public Set<String> getClassContenu() {
-        return classContenu;
     }
 
     @Override
@@ -129,10 +115,9 @@ public class DendroNode{
         return "DendroNode{" +
                 "leftChild=" + leftChild +
                 ", rightChild=" + rightChild +
-                ", parent=" + parent +
                 ", hauteurCoupling=" + hauteurCoupling +
                 ", className='" + className + '\'' +
-                ", classContenu=" + classContenu +
+                ", isLeaf=" + isLeaf() +
                 '}';
     }
 

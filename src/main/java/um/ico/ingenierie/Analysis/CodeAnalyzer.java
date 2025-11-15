@@ -6,6 +6,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Result.CodeAnalyzerResult;
 import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
 import um.ico.ingenierie.Analysis.Visitor.JdtVisitor;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
@@ -48,7 +49,7 @@ public class CodeAnalyzer {
         this.filesHandler = javaFilesHandler;
     }
 
-    public AnalysisResponse analyze() {
+    public CodeAnalyzerResult analyze() {
 
         log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.filesHandler.getRootPath());
         log.debug("Nombre de fichiers .java trouvés : {}", this.filesHandler.getAllPathJava().size());
@@ -79,7 +80,8 @@ public class CodeAnalyzer {
                 throw new RuntimeException(e);
             }
         }
-        return AnalysisResponse.from(metricsData,callGraph);
+        return new CodeAnalyzerResult(metricsData,callGraph);
+        //return AnalysisResponse.from(metricsData,callGraph);
     }
 
     private CompilationUnit initCu(String[] classPath,String[] sources,Path filePath) throws IOException {

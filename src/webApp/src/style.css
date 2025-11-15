@@ -280,6 +280,13 @@ section h2 {
     border-top: 1px solid #dee2e6;
 }
 
+#dendrogram-graph {
+    height: 700px;
+    width: 100%;
+    background-color: #fafafa;
+    border-top: 1px solid #dee2e6;
+}
+
 @media (max-width: 768px) {
     header {
         padding: 1rem;
@@ -309,6 +316,10 @@ section h2 {
 
     #call-graph, #coupling-graph {
         height: 400px;
+    }
+    
+    #dendrogram-graph {
+        height: 500px;
     }
 }
 

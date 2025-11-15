@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import um.ico.ingenierie.Analysis.Service.AnalysisService;
+import um.ico.ingenierie.Service.AnalysisService;
 import um.ico.ingenierie.Api.Request.GitAnalysisRequest;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;

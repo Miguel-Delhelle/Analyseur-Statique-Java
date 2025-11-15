@@ -30,11 +30,21 @@ interface TreeCoupling {
     graphCoupling: CouplingEdge[];
 }
 
+interface DendroNode {
+    leftChild: DendroNode | null;
+    rightChild: DendroNode | null;
+    hauteurCoupling: number;
+    className: string | null;
+    allClassNames: string[];
+    leaf: boolean;
+}
+
 interface AnalysisResponse {
     metricsDto: MetricsDto;
     graphDTO: GraphDTO;
     treeCoupling: TreeCoupling;
     basePackage: string;
+    rootDendro?: DendroNode;
 }
 
 class AnalyzerApp {
@@ -47,10 +57,13 @@ class AnalyzerApp {
     private metricsSummary!: HTMLElement;
     private callGraph!: HTMLElement;
     private couplingGraph!: HTMLElement;
+    private dendrogramGraph!: HTMLElement;
     private callGraphFilterBtn!: HTMLButtonElement;
     private couplingGraphFilterBtn!: HTMLButtonElement;
+    private dendrogramFilterBtn!: HTMLButtonElement;
     private callGraphFullscreenBtn!: HTMLButtonElement;
     private couplingGraphFullscreenBtn!: HTMLButtonElement;
+    private dendrogramFullscreenBtn!: HTMLButtonElement;
     private fullscreenModal!: HTMLElement;
     private fullscreenGraph!: HTMLElement;
     private fullscreenTitle!: HTMLElement;
@@ -58,8 +71,9 @@ class AnalyzerApp {
     private basePackage: string = '';
     private callGraphFilterActive: boolean = false;
     private couplingGraphFilterActive: boolean = false;
+    private dendrogramFilterActive: boolean = false;
     private currentAnalysisData: AnalysisResponse | null = null;
-    private currentFullscreenGraph: 'call' | 'coupling' | null = null;
+    private currentFullscreenGraph: 'call' | 'coupling' | 'dendrogram' | null = null;
 
 
     constructor() {
@@ -77,10 +91,13 @@ class AnalyzerApp {
         this.metricsSummary = document.getElementById('metrics-summary') as HTMLElement;
         this.callGraph = document.getElementById('call-graph') as HTMLElement;
         this.couplingGraph = document.getElementById('coupling-graph') as HTMLElement;
+        this.dendrogramGraph = document.getElementById('dendrogram-graph') as HTMLElement;
         this.callGraphFilterBtn = document.getElementById('call-graph-filter') as HTMLButtonElement;
         this.couplingGraphFilterBtn = document.getElementById('coupling-graph-filter') as HTMLButtonElement;
+        this.dendrogramFilterBtn = document.getElementById('dendrogram-filter') as HTMLButtonElement;
         this.callGraphFullscreenBtn = document.getElementById('call-graph-fullscreen') as HTMLButtonElement;
         this.couplingGraphFullscreenBtn = document.getElementById('coupling-graph-fullscreen') as HTMLButtonElement;
+        this.dendrogramFullscreenBtn = document.getElementById('dendrogram-fullscreen') as HTMLButtonElement;
         this.fullscreenModal = document.getElementById('fullscreen-modal') as HTMLElement;
         this.fullscreenGraph = document.getElementById('fullscreen-graph') as HTMLElement;
         this.fullscreenTitle = document.getElementById('fullscreen-title') as HTMLElement;
@@ -94,8 +111,23 @@ class AnalyzerApp {
         });
         this.callGraphFilterBtn?.addEventListener('click', () => this.toggleCallGraphFilter());
         this.couplingGraphFilterBtn?.addEventListener('click', () => this.toggleCouplingGraphFilter());
+        this.dendrogramFilterBtn?.addEventListener('click', () => this.toggleDendrogramFilter());
         this.callGraphFullscreenBtn?.addEventListener('click', () => this.openFullscreen('call'));
         this.couplingGraphFullscreenBtn?.addEventListener('click', () => this.openFullscreen('coupling'));
+        this.dendrogramFullscreenBtn?.addEventListener('click', () => this.openFullscreen('dendrogram'));
+        
+        // Bouton de test pour le dendrogramme (développement)
+        const testBtn = document.createElement('button');
+        testBtn.textContent = 'Test Dendrogramme';
+        testBtn.style.position = 'fixed';
+        testBtn.style.top = '10px';
+        testBtn.style.right = '10px';
+        testBtn.style.zIndex = '1000';
+        testBtn.addEventListener('click', () => {
+            const testData = this.createTestDendrogram();
+            this.createSVGDendrogram(testData, this.dendrogramGraph);
+        });
+        document.body.appendChild(testBtn);
         this.fullscreenCloseBtn?.addEventListener('click', () => this.closeFullscreen());
         
         // Fermer le modal en cliquant sur l'arrière-plan
@@ -496,6 +528,12 @@ class AnalyzerApp {
                 ? `Afficher tout (actuellement: ${this.basePackage}*)` 
                 : 'Filtrer par package de base';
         }
+        if (this.dendrogramFilterBtn) {
+            this.dendrogramFilterBtn.classList.toggle('active', this.dendrogramFilterActive);
+            this.dendrogramFilterBtn.textContent = this.dendrogramFilterActive 
+                ? `Afficher tout (actuellement: ${this.basePackage}*)` 
+                : 'Filtrer par package de base';
+        }
     }
 
     private shouldIncludeInCallGraph(signature: string): boolean {
@@ -512,7 +550,22 @@ class AnalyzerApp {
         return className.startsWith(this.basePackage);
     }
 
-    private openFullscreen(graphType: 'call' | 'coupling'): void {
+    private shouldIncludeInDendrogramGraph(className: string): boolean {
+        if (!this.dendrogramFilterActive || !this.basePackage) {
+            return true;
+        }
+        return className.startsWith(this.basePackage);
+    }
+
+    private toggleDendrogramFilter(): void {
+        this.dendrogramFilterActive = !this.dendrogramFilterActive;
+        this.updateFilterButtons();
+        if (this.currentAnalysisData && this.currentAnalysisData.rootDendro) {
+            this.displayDendrogramGraph(this.currentAnalysisData.rootDendro);
+        }
+    }
+
+    private openFullscreen(graphType: 'call' | 'coupling' | 'dendrogram'): void {
         this.currentFullscreenGraph = graphType;
         this.fullscreenModal.classList.remove('hidden');
         
@@ -521,10 +574,15 @@ class AnalyzerApp {
             if (this.currentAnalysisData) {
                 this.displayCallGraphInContainer(this.currentAnalysisData.graphDTO, this.fullscreenGraph);
             }
-        } else {
+        } else if (graphType === 'coupling') {
             this.fullscreenTitle.textContent = 'Graphe de Couplage - Plein Écran';
             if (this.currentAnalysisData) {
                 this.displayCouplingGraphInContainer(this.currentAnalysisData.treeCoupling, this.fullscreenGraph);
+            }
+        } else if (graphType === 'dendrogram') {
+            this.fullscreenTitle.textContent = 'Dendrogramme - Plein Écran';
+            if (this.currentAnalysisData && this.currentAnalysisData.rootDendro) {
+                this.displayDendrogramGraphInContainer(this.currentAnalysisData.rootDendro, this.fullscreenGraph);
             }
         }
     }
@@ -665,6 +723,452 @@ class AnalyzerApp {
                 initialTemp: 300,
                 coolingFactor: 0.95,
                 minTemp: 1.0
+            }
+        });
+    }
+
+    private displayDendrogramGraph(rootDendro: DendroNode): void {
+        console.log('Affichage du dendrogramme:', rootDendro);
+        this.dendrogramGraph.innerHTML = '';
+        
+        // Créer un vrai dendrogramme avec SVG (comme dans votre référence)
+        this.createSVGDendrogram(rootDendro, this.dendrogramGraph);
+    }
+
+    private convertDendrogramToCytoscape(rootNode: DendroNode): any[] {
+        const elements: any[] = [];
+        
+        // Créer un vrai dendrogramme avec lignes droites
+        const leafPositions: { [key: string]: number } = {};
+        const nodePositions: { [key: string]: { x: number, y: number } } = {};
+        
+        // 1. Collecter toutes les feuilles et leur assigner des positions X
+        const leaves: string[] = [];
+        this.collectLeaves(rootNode, leaves);
+        
+        leaves.forEach((leaf, index) => {
+            leafPositions[leaf] = index * 120 + 60;
+        });
+        
+        // 2. Créer les lignes du dendrogramme (pas de nœuds, que des lignes)
+        this.createDendrogramLines(rootNode, elements, leafPositions, nodePositions, 0);
+        
+        // 3. Ajouter les labels des feuilles
+        leaves.forEach(leaf => {
+            const x = leafPositions[leaf];
+            elements.push({
+                data: {
+                    id: `leaf_${leaf}`,
+                    label: this.simplifyClassName(leaf),
+                    type: 'leaf-label'
+                },
+                position: { x, y: 520 }
+            });
+        });
+        
+        console.log('Dendrogramme avec lignes généré:', elements.length, 'éléments');
+        return elements;
+    }
+
+    private collectLeaves(node: DendroNode, leaves: string[]): void {
+        if (node.leaf && node.className) {
+            leaves.push(node.className);
+        } else {
+            if (node.leftChild) {
+                this.collectLeaves(node.leftChild, leaves);
+            }
+            if (node.rightChild) {
+                this.collectLeaves(node.rightChild, leaves);
+            }
+        }
+    }
+
+    private createDendrogramLines(
+        node: DendroNode, 
+        elements: any[], 
+        leafPositions: { [key: string]: number },
+        nodePositions: { [key: string]: { x: number, y: number } },
+        nodeCounter: number
+    ): { x: number, minX: number, maxX: number } {
+        
+        if (node.leaf && node.className) {
+            // Feuille : retourner sa position
+            const x = leafPositions[node.className];
+            return { x, minX: x, maxX: x };
+        }
+        
+        // Nœud interne : traiter les enfants d'abord
+        let leftResult = null;
+        let rightResult = null;
+        
+        if (node.leftChild) {
+            leftResult = this.createDendrogramLines(node.leftChild, elements, leafPositions, nodePositions, nodeCounter);
+        }
+        
+        if (node.rightChild) {
+            rightResult = this.createDendrogramLines(node.rightChild, elements, leafPositions, nodePositions, nodeCounter);
+        }
+        
+        // Calculer la position de ce nœud
+        let nodeX = 0;
+        let minX = 0;
+        let maxX = 0;
+        
+        if (leftResult && rightResult) {
+            minX = Math.min(leftResult.minX, rightResult.minX);
+            maxX = Math.max(leftResult.maxX, rightResult.maxX);
+            nodeX = (minX + maxX) / 2;
+        } else if (leftResult) {
+            minX = leftResult.minX;
+            maxX = leftResult.maxX;
+            nodeX = leftResult.x;
+        } else if (rightResult) {
+            minX = rightResult.minX;
+            maxX = rightResult.maxX;
+            nodeX = rightResult.x;
+        }
+        
+        // Hauteur basée sur le couplage (inversée : 0 = haut, 1 = bas)
+        const nodeY = 50 + (1 - node.hauteurCoupling) * 400;
+        
+        // Créer les lignes du dendrogramme (style classique)
+        const nodeId = `junction_${nodeCounter++}`;
+        
+        // Ligne horizontale reliant les deux branches
+        if (leftResult && rightResult) {
+            // Point de jonction horizontal
+            elements.push({
+                data: {
+                    id: `h_line_${nodeId}`,
+                    type: 'horizontal-line'
+                },
+                position: { x: nodeX, y: nodeY }
+            });
+            
+            // Lignes verticales vers les enfants
+            elements.push({
+                data: {
+                    id: `v_left_${nodeId}`,
+                    type: 'vertical-line'
+                },
+                position: { x: leftResult.x, y: nodeY }
+            });
+            
+            elements.push({
+                data: {
+                    id: `v_right_${nodeId}`,
+                    type: 'vertical-line'
+                },
+                position: { x: rightResult.x, y: nodeY }
+            });
+        }
+        
+        return { x: nodeX, minX, maxX };
+    }
+
+    private createSVGDendrogram(rootNode: DendroNode, container: HTMLElement): void {
+        const width = container.clientWidth || 800;
+        const height = 600;
+        const margin = { top: 50, right: 50, bottom: 100, left: 50 };
+        
+        // Créer l'élément SVG
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', width.toString());
+        svg.setAttribute('height', height.toString());
+        svg.style.background = '#fafafa';
+        
+        // Collecter les feuilles
+        const leaves: string[] = [];
+        this.collectLeaves(rootNode, leaves);
+        
+        // Calculer les positions des feuilles
+        const leafSpacing = (width - margin.left - margin.right) / (leaves.length - 1);
+        const leafPositions: { [key: string]: number } = {};
+        leaves.forEach((leaf, index) => {
+            leafPositions[leaf] = margin.left + index * leafSpacing;
+        });
+        
+        // Dessiner le dendrogramme
+        this.drawDendrogramNode(rootNode, svg, leafPositions, margin, height - margin.bottom);
+        
+        // Ajouter les labels des feuilles
+        leaves.forEach(leaf => {
+            const x = leafPositions[leaf];
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x.toString());
+            text.setAttribute('y', (height - margin.bottom + 20).toString());
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '10px');
+            text.setAttribute('font-family', 'Arial, sans-serif');
+            text.setAttribute('fill', '#2c3e50');
+            text.setAttribute('transform', `rotate(-45, ${x}, ${height - margin.bottom + 20})`);
+            text.textContent = this.simplifyClassName(leaf);
+            svg.appendChild(text);
+        });
+        
+        // Ajouter l'axe Y (hauteur de couplage)
+        this.drawYAxis(svg, margin, height - margin.bottom - margin.top);
+        
+        container.appendChild(svg);
+    }
+    
+    private drawDendrogramNode(
+        node: DendroNode, 
+        svg: SVGElement, 
+        leafPositions: { [key: string]: number },
+        margin: { top: number, right: number, bottom: number, left: number },
+        baseY: number
+    ): { x: number, y: number } {
+        
+        if (node.leaf && node.className) {
+            // Feuille : ligne verticale jusqu'en bas
+            const x = leafPositions[node.className];
+            const y = baseY;
+            
+            // Ligne verticale de la feuille
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x.toString());
+            line.setAttribute('y1', y.toString());
+            line.setAttribute('x2', x.toString());
+            line.setAttribute('y2', baseY.toString());
+            line.setAttribute('stroke', '#2c3e50');
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+            
+            return { x, y };
+        }
+        
+        // Nœud interne
+        let leftPos = null;
+        let rightPos = null;
+        
+        if (node.leftChild) {
+            leftPos = this.drawDendrogramNode(node.leftChild, svg, leafPositions, margin, baseY);
+        }
+        
+        if (node.rightChild) {
+            rightPos = this.drawDendrogramNode(node.rightChild, svg, leafPositions, margin, baseY);
+        }
+        
+        if (leftPos && rightPos) {
+            // Calculer la position Y basée sur la hauteur de couplage
+            const nodeY = margin.top + (1 - node.hauteurCoupling) * (baseY - margin.top);
+            
+            // Ligne horizontale reliant les deux branches
+            const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            hLine.setAttribute('x1', leftPos.x.toString());
+            hLine.setAttribute('y1', nodeY.toString());
+            hLine.setAttribute('x2', rightPos.x.toString());
+            hLine.setAttribute('y2', nodeY.toString());
+            hLine.setAttribute('stroke', '#2c3e50');
+            hLine.setAttribute('stroke-width', '2');
+            svg.appendChild(hLine);
+            
+            // Lignes verticales vers les enfants
+            const leftVLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            leftVLine.setAttribute('x1', leftPos.x.toString());
+            leftVLine.setAttribute('y1', leftPos.y.toString());
+            leftVLine.setAttribute('x2', leftPos.x.toString());
+            leftVLine.setAttribute('y2', nodeY.toString());
+            leftVLine.setAttribute('stroke', '#2c3e50');
+            leftVLine.setAttribute('stroke-width', '2');
+            svg.appendChild(leftVLine);
+            
+            const rightVLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            rightVLine.setAttribute('x1', rightPos.x.toString());
+            rightVLine.setAttribute('y1', rightPos.y.toString());
+            rightVLine.setAttribute('x2', rightPos.x.toString());
+            rightVLine.setAttribute('y2', nodeY.toString());
+            rightVLine.setAttribute('stroke', '#2c3e50');
+            rightVLine.setAttribute('stroke-width', '2');
+            svg.appendChild(rightVLine);
+            
+            return { x: (leftPos.x + rightPos.x) / 2, y: nodeY };
+        }
+        
+        return { x: 0, y: 0 };
+    }
+    
+    private drawYAxis(svg: SVGElement, margin: { top: number, right: number, bottom: number, left: number }, height: number): void {
+        // Axe Y
+        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        yAxis.setAttribute('x1', (margin.left - 10).toString());
+        yAxis.setAttribute('y1', margin.top.toString());
+        yAxis.setAttribute('x2', (margin.left - 10).toString());
+        yAxis.setAttribute('y2', (margin.top + height).toString());
+        yAxis.setAttribute('stroke', '#666');
+        yAxis.setAttribute('stroke-width', '1');
+        svg.appendChild(yAxis);
+        
+        // Graduations et labels
+        for (let i = 0; i <= 10; i++) {
+            const y = margin.top + (i / 10) * height;
+            const value = (1 - i / 10).toFixed(1);
+            
+            // Graduation
+            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tick.setAttribute('x1', (margin.left - 15).toString());
+            tick.setAttribute('y1', y.toString());
+            tick.setAttribute('x2', (margin.left - 5).toString());
+            tick.setAttribute('y2', y.toString());
+            tick.setAttribute('stroke', '#666');
+            tick.setAttribute('stroke-width', '1');
+            svg.appendChild(tick);
+            
+            // Label
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', (margin.left - 20).toString());
+            label.setAttribute('y', (y + 3).toString());
+            label.setAttribute('text-anchor', 'end');
+            label.setAttribute('font-size', '10px');
+            label.setAttribute('font-family', 'Arial, sans-serif');
+            label.setAttribute('fill', '#666');
+            label.textContent = value;
+            svg.appendChild(label);
+        }
+        
+        // Titre de l'axe Y
+        const yTitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        yTitle.setAttribute('x', '15');
+        yTitle.setAttribute('y', (margin.top + height / 2).toString());
+        yTitle.setAttribute('text-anchor', 'middle');
+        yTitle.setAttribute('font-size', '12px');
+        yTitle.setAttribute('font-family', 'Arial, sans-serif');
+        yTitle.setAttribute('fill', '#2c3e50');
+        yTitle.setAttribute('transform', `rotate(-90, 15, ${margin.top + height / 2})`);
+        yTitle.textContent = 'Hauteur de Couplage';
+        svg.appendChild(yTitle);
+    }
+
+    // Fonction de test avec des données réelles
+    private createTestDendrogram(): DendroNode {
+        return {
+            leftChild: {
+                leftChild: null,
+                rightChild: null,
+                hauteurCoupling: 1.0,
+                className: 'um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.DendroNode',
+                allClassNames: ['um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.DendroNode'],
+                leaf: true
+            },
+            rightChild: {
+                leftChild: {
+                    leftChild: null,
+                    rightChild: null,
+                    hauteurCoupling: 1.0,
+                    className: 'um.ico.ingenierie.Analysis.CodeAnalyzer',
+                    allClassNames: ['um.ico.ingenierie.Analysis.CodeAnalyzer'],
+                    leaf: true
+                },
+                rightChild: {
+                    leftChild: {
+                        leftChild: null,
+                        rightChild: null,
+                        hauteurCoupling: 1.0,
+                        className: 'um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler',
+                        allClassNames: ['um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler'],
+                        leaf: true
+                    },
+                    rightChild: {
+                        leftChild: null,
+                        rightChild: null,
+                        hauteurCoupling: 1.0,
+                        className: 'um.ico.ingenierie.Analysis.Service.AnalysisService',
+                        allClassNames: ['um.ico.ingenierie.Analysis.Service.AnalysisService'],
+                        leaf: true
+                    },
+                    hauteurCoupling: 0.047619047619047616,
+                    className: null,
+                    allClassNames: ['um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler', 'um.ico.ingenierie.Analysis.Service.AnalysisService'],
+                    leaf: false
+                },
+                hauteurCoupling: 0.023809523809523808,
+                className: null,
+                allClassNames: ['um.ico.ingenierie.Analysis.CodeAnalyzer', 'um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler', 'um.ico.ingenierie.Analysis.Service.AnalysisService'],
+                leaf: false
+            },
+            hauteurCoupling: 0.017543859649122806,
+            className: null,
+            allClassNames: ['um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.DendroNode', 'um.ico.ingenierie.Analysis.CodeAnalyzer', 'um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler', 'um.ico.ingenierie.Analysis.Service.AnalysisService'],
+            leaf: false
+        };
+    }
+
+    private displayDendrogramGraphInContainer(rootDendro: DendroNode, container: HTMLElement): void {
+        container.innerHTML = '';
+        
+        const elements = this.convertDendrogramToCytoscape(rootDendro);
+        
+        cytoscape({
+            container: container,
+            elements: elements,
+            style: [
+                {
+                    selector: 'node[type="leaf"]',
+                    style: {
+                        'background-color': '#27ae60',
+                        'label': 'data(label)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'color': '#2c3e50',
+                        'font-size': '12px',
+                        'font-weight': 'bold',
+                        'text-outline-width': 2,
+                        'text-outline-color': '#fff',
+                        'text-outline-opacity': 0.8,
+                        'width': '80px',
+                        'height': '80px',
+                        'border-width': 2,
+                        'border-color': '#229954',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '75px',
+                        'shape': 'ellipse'
+                    }
+                },
+                {
+                    selector: 'node[type="internal"]',
+                    style: {
+                        'background-color': (ele: any) => {
+                            const coupling = ele.data('coupling') || 0;
+                            const intensity = Math.min(coupling, 1);
+                            return `rgb(${Math.round(155 + (52 - 155) * intensity)}, ${Math.round(89 + (152 - 89) * intensity)}, ${Math.round(182 + (219 - 182) * intensity)})`;
+                        },
+                        'label': 'data(label)',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'color': '#fff',
+                        'font-size': '10px',
+                        'font-weight': 'bold',
+                        'text-outline-width': 1,
+                        'text-outline-color': '#2c3e50',
+                        'text-outline-opacity': 0.8,
+                        'width': '50px',
+                        'height': '50px',
+                        'border-width': 2,
+                        'border-color': '#8e44ad',
+                        'shape': 'diamond'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 3,
+                        'line-color': '#2c3e50',
+                        'curve-style': 'segments',
+                        'segment-distances': [0.5],
+                        'segment-weights': [0.5],
+                        'edge-distances': 'node-position',
+                        'source-endpoint': 'outside-to-node',
+                        'target-endpoint': 'outside-to-node'
+                    }
+                }
+            ],
+            layout: {
+                name: 'preset',
+                animate: true,
+                animationDuration: 1500,
+                fit: true,
+                padding: 80
             }
         });
     }
