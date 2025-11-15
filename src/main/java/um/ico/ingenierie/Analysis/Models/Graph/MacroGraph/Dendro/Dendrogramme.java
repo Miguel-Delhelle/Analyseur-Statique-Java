@@ -4,46 +4,61 @@ import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
 import um.ico.ingenierie.Common.utils.IcoUtils;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class Dendrogramme {
 
+    List<PaireClass> coupleList;
 
     public Dendrogramme(){
     }
 
+    public Dendrogramme(List<PaireClass> coupleList){
+        CouplingGraph.triSurCouplingScore(coupleList);
+    }
 
-    public static Set<DendroNode> constructDendo(List<PaireClass> listCoupling){
-        List<PaireClass> classList = CouplingGraph.triSurCouplingScore(listCoupling);
-        Set<String> classSet = IcoUtils.getAllClass_From(listCoupling, true);
-        Set<DendroNode> leafs = initLeafs(classSet);
-        Set<DendroNode> dendro = new HashSet<>();
 
-        for (DendroNode leaf : leafs){
-            String leafStr = leaf.getClassName();
+    public static DendroNode constructDendo(List<PaireClass> coupleListFromGraph){
 
-            List<PaireClass> coupleDeCetteLeaf = PaireClass.toutLesCouplesDe(leafStr,classList);
-            PaireClass futurNode = clusterProche(coupleDeCetteLeaf,leafStr);
+        List<PaireClass> listCoupling = new ArrayList<>(coupleListFromGraph);
 
-            String leafLaPlusProcheStr = futurNode.getOtherClass(leafStr);
-            DendroNode leafLePLusProche = Dendrogramme.getByClassName(leafs,leafLaPlusProcheStr);
-
-            dendro.add(new DendroNode(leaf,leafLePLusProche,futurNode.getCouplage()));
+        Set<String> strClass = IcoUtils.getAllClass_From(listCoupling, true);
+        //HashMap<String,DendroNode> leafs = new HashMap<>();
+        Set<DendroNode> clusters = new HashSet<>();
+        for (String classStr: strClass){
+            DendroNode leaf = new DendroNode(classStr);
+            //leafs.put(classStr,leaf);
+            clusters.add(leaf);
         }
 
-        return dendro;
+        while (clusters.size() > 1){
+
+            PaireClass tmpForNode = listCoupling.get(0);
+            DendroNode childA = Dendrogramme.getByClassName(clusters,tmpForNode.getSignClassA());
+            DendroNode childB = Dendrogramme.getByClassName(clusters, tmpForNode.getSignClassB());
+            DendroNode newNode = new DendroNode(childA,childB,tmpForNode.getCouplage());
+            listCoupling.remove(0);
+
+
+            clusters.remove(childA);
+            clusters.remove(childB);
+            clusters.add(newNode);
+
+
+
+        }
+
+        return clusters.iterator().next();
 
     }
 
-    public static Set<DendroNode> initLeafs(Set<String> classSet){
-        Set<DendroNode> dendro = new HashSet<>();
-        for (String strClass: classSet){
-            dendro.add(new DendroNode(strClass));
+    public static Set<DendroNode> initLeafs(List<PaireClass> classList){
+        Set<String> classSet = IcoUtils.getAllClass_From(classList, true);
+        Set<DendroNode> nodeSet = new HashSet<>();
+        for (String classStr : classSet){
+            nodeSet.add(new DendroNode(classStr));
         }
-        return dendro;
+        return nodeSet;
     }
 
     /**
@@ -51,27 +66,53 @@ public class Dendrogramme {
      *
      * @author Miguel Delhelle
      */
-    public static PaireClass clusterProche(List<PaireClass> coupleList, String nameOfClass){
+    public PaireClass clusterProche(List<PaireClass> coupleList, String nameOfClass){
         List<PaireClass> toutLesCouplesDe_LaClass = PaireClass.toutLesCouplesDe(nameOfClass,coupleList);
+        if (toutLesCouplesDe_LaClass.isEmpty()){return null;}
         toutLesCouplesDe_LaClass = CouplingGraph.triSurCouplingScore(toutLesCouplesDe_LaClass);
         return toutLesCouplesDe_LaClass.get(0);
     }
 
-    public static PaireClass clusterProche(List<PaireClass> coupleList, DendroNode leaf){
-        String nameOfClass = leaf.getClassName();
-        List<PaireClass> toutLesCouplesDe_LaClass = PaireClass.toutLesCouplesDe(nameOfClass,coupleList);
-        toutLesCouplesDe_LaClass = CouplingGraph.triSurCouplingScore(toutLesCouplesDe_LaClass);
-        return toutLesCouplesDe_LaClass.get(0);
+//    public static PaireClass clusterProche(Set<DendroNode> coupleList, DendroNode node){
+//
+//    }
+
+    public PaireClass clusterProche(Set<DendroNode> node){
+        PaireClass nodeACreer = CouplingGraph.triSurCouplingScore(coupleList).get(0);
+        coupleList.remove(0);
+        return nodeACreer;
+
     }
 
     public static DendroNode getByClassName(Set<DendroNode> leafSet, String nameOfClass){
+        Set<DendroNode> nodesWithThatClass = new HashSet<>();
         for (DendroNode noeudCherche: leafSet){
-            if ((noeudCherche.isLeaf()) && (noeudCherche.getClassName().equals(nameOfClass))){
-                return noeudCherche;
+            if (noeudCherche.containsClass(nameOfClass)){
+                nodesWithThatClass.add(noeudCherche);
             }
         }
-        return null;
+        DendroNode minCouplingNode = null;
+        double minCoupling = Double.MAX_VALUE;
+
+        for (DendroNode node : nodesWithThatClass) {
+            if (node.getHauteurCoupling() < minCoupling) {
+                minCoupling = node.getHauteurCoupling();
+                minCouplingNode = node;
+            }
+        }
+
+
+        return minCouplingNode;
     }
+
+    // SI LA METHODE RENVOIE NULL APPELLEE
+//
+//    public static DendroNode getByClassNameR(Set<DendroNode> activeCluster, String nameOfClass) {
+//
+//        if (activeCluster.contains(
+//
+//    }
+
 
 //    public static PaireClass clusterProche(Set<DendroNode> leafSet, DendroNode leaf){
 //        String nameOfClass = leaf.getClassName();

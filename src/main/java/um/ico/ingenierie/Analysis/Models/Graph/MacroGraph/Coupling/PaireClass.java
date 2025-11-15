@@ -3,10 +3,7 @@ package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PaireClass{
 
@@ -27,9 +24,22 @@ public class PaireClass{
         }
     }
 
-    public boolean equals(PaireClass that) {
-        return (signClassA.equals(that.signClassA) && signClassB.equals(that.signClassB)) ||
-                (signClassA.equals(that.signClassB) && signClassB.equals(that.signClassA));
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof PaireClass)) return false;
+
+        PaireClass that = (PaireClass) obj;
+        return (this.signClassA.equals(that.signClassA) && this.signClassB.equals(that.signClassB))
+                || (this.signClassA.equals(that.signClassB) && this.signClassB.equals(that.signClassA));
+    }
+    @Override
+    public int hashCode() {
+        // ordre indépendant : on trie les deux noms
+        String c1 = signClassA.compareTo(signClassB) <= 0 ? signClassA : signClassB;
+        String c2 = signClassA.compareTo(signClassB) > 0 ? signClassA : signClassB;
+
+        return Objects.hash(c1, c2);
     }
 
     public String twoSignature(){
