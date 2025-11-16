@@ -29,7 +29,7 @@ interface CouplingEdge {
     classA: string;
     classB: string;
     nbrOfLink: number;
-    couplage: number;
+    coupling: number;
 }
 
 interface TreeCoupling {
@@ -224,8 +224,8 @@ class AnalyzerApp {
         const nodes = new Set<string>();
         const processedPairs = new Set<string>();
         couplingEdges.forEach(edge => { if (this.shouldIncludeInCouplingGraph(edge.classA)) { nodes.add(edge.classA); } if (this.shouldIncludeInCouplingGraph(edge.classB)) { nodes.add(edge.classB); } });
-        nodes.forEach(node => { const nodeCoupling = couplingEdges.filter(e => e.classA === node || e.classB === node).reduce((sum, e) => sum + e.couplage, 0); const simplifiedLabel = this.simplifyClassName(node); elements.push({ data: { id: node, label: simplifiedLabel, fullName: node, coupling: nodeCoupling } }); });
-        couplingEdges.forEach(edge => { if (this.shouldIncludeInCouplingGraph(edge.classA) && this.shouldIncludeInCouplingGraph(edge.classB)) { const pairKey = [edge.classA, edge.classB].sort().join('-'); if (!processedPairs.has(pairKey)) { processedPairs.add(pairKey); const couplingPercentage = Math.round(edge.couplage * 100); elements.push({ data: { id: `${edge.classA}-${edge.classB}`, source: edge.classA, target: edge.classB, coupling: edge.couplage, nbrOfLink: edge.nbrOfLink, label: `${couplingPercentage}%` } }); } } });
+        nodes.forEach(node => { const nodeCoupling = couplingEdges.filter(e => e.classA === node || e.classB === node).reduce((sum, e) => sum + e.coupling, 0); const simplifiedLabel = this.simplifyClassName(node); elements.push({ data: { id: node, label: simplifiedLabel, fullName: node, coupling: nodeCoupling } }); });
+        couplingEdges.forEach(edge => { if (this.shouldIncludeInCouplingGraph(edge.classA) && this.shouldIncludeInCouplingGraph(edge.classB)) { const pairKey = [edge.classA, edge.classB].sort().join('-'); if (!processedPairs.has(pairKey)) { processedPairs.add(pairKey); const couplingPercentage = Math.round(edge.coupling * 100); elements.push({ data: { id: `${edge.classA}-${edge.classB}`, source: edge.classA, target: edge.classB, coupling: edge.coupling, nbrOfLink: edge.nbrOfLink, label: `${couplingPercentage}%` } }); } } });
         return elements;
     }
 

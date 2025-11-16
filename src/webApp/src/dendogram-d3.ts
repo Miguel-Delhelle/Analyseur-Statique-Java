@@ -61,7 +61,7 @@ export class D3DendrogramRenderer {
             .attr('fill', 'none')
             .attr('stroke', '#555')
             .attr('stroke-width', 1.5)
-            .attr('d', d => this.computeLinkPath(d as d3.HierarchyPointNode<D3HierarchyNode>));
+            .attr('d', d => this.computeLinkPath(d as d3.HierarchyPointNode<D3HierarchyNode>,yScale));
 
         // --- Dessiner les nœuds (labels) ---
         svg.selectAll('g.label-group')
@@ -109,33 +109,74 @@ export class D3DendrogramRenderer {
         };
     }
 
-    private computeLinkPath(d: d3.HierarchyPointNode<D3HierarchyNode>): string {
-    if (!d.children || d.children.length === 0) return '';
+//     private computeLinkPath(d: d3.HierarchyPointNode<D3HierarchyNode>): string {
+//     if (!d.children || d.children.length === 0) return '';
 
-    // Cas 2 enfants : simple U-shape
-    if (d.children.length === 2) {
-        const [left, right] = d.children;
-        return `M${left.x},${left.y} L${left.x},${d.y} L${right.x},${d.y} L${right.x},${right.y}`;
+//     Cas 2 enfants : simple U-shape
+//     if (d.children.length === 2) {
+//         const [left, right] = d.children;
+//         return `M${left.x},${left.y} L${left.x},${d.y} L${right.x},${d.y} L${right.x},${right.y}`;
+//     }
+
+//     Cas général pour 3 enfants ou plus
+//     const xs = d.children.map(c => c.x);
+//     const minX = Math.min(...xs);
+//     const maxX = Math.max(...xs);
+
+//     Commence au premier enfant
+//     let path = `M${d.children[0].x},${d.children[0].y}`;
+//     Monte jusqu'au parent
+//     path += ` L${d.children[0].x},${d.y}`;
+//     Traverser horizontalement tous les enfants
+//     path += ` L${d.children[d.children.length - 1].x},${d.y}`;
+//     Descendre vers chaque enfant
+//     d.children.forEach(c => {
+//         path += ` L${c.x},${c.y}`;
+//     });
+
+//     return path;
+// }
+    private computeLinkPath(
+        d: d3.HierarchyNode<D3HierarchyNode>,
+        yScale: d3.ScaleLinear<number, number>
+    ): string {
+        if (!d.children || d.children.length === 0) return '';
+
+        // Convert parent coordinates
+        const parentX = d.x!;
+        const parentY = yScale(d.data.value);
+
+        // Sort children by x to guarantee order and avoid weird line crossings
+        const children = [...d.children].sort((a, b) => a.x! - b.x!);
+
+        if (children.length === 2) {
+            // Optimized 2-child U-shape
+            const [left, right] = children;
+            return `
+                M${left.x},${yScale(left.data.value)}
+                L${left.x},${parentY}
+                L${right.x},${parentY}
+                L${right.x},${yScale(right.data.value)}
+            `.trim();
+        }
+
+        // General case: 3+ children
+        const first = children[0];
+        const last = children[children.length - 1];
+
+        let path = `
+            M${first.x},${yScale(first.data.value)}
+            L${first.x},${parentY}
+            L${last.x},${parentY}
+        `;
+
+        // Draw lines down to each child
+        children.forEach(c => {
+            path += ` L${c.x},${yScale(c.data.value)}`;
+        });
+
+        return path.trim();
     }
-
-    // Cas général pour 3 enfants ou plus
-    const xs = d.children.map(c => c.x);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-
-    // Commence au premier enfant
-    let path = `M${d.children[0].x},${d.children[0].y}`;
-    // Monte jusqu'au parent
-    path += ` L${d.children[0].x},${d.y}`;
-    // Traverser horizontalement tous les enfants
-    path += ` L${d.children[d.children.length - 1].x},${d.y}`;
-    // Descendre vers chaque enfant
-    d.children.forEach(c => {
-        path += ` L${c.x},${c.y}`;
-    });
-
-    return path;
-}
 
 
     private setupContainer(container: HTMLElement): void {

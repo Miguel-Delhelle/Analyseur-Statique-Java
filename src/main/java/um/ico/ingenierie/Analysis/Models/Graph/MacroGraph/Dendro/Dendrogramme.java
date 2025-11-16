@@ -15,10 +15,9 @@ public final class Dendrogramme {
 
     /**
      * Construit le dendrogramme complet à partir d'une liste de couplages.
-     * C'est la seule méthode publique de cette classe.
      *
-     * @param allCouplings La liste de toutes les {@link PaireClass} calculées.
-     * @return Le {@link DendroNode} racine de l'arbre hiérarchique.
+     * @param allCouplings La liste de toutes les {@link PaireClass} calculées pour l'application.
+     * @return Le {@link DendroNode} racine de l'arbre hiérarchique complet.
      */
     public static DendroNode construct(List<PaireClass> allCouplings) {
         // 1. PRÉPARATION : Trier les couplages du plus FORT au plus FAIBLE.
@@ -39,8 +38,6 @@ public final class Dendrogramme {
             DendroNode cluster2 = null;
 
             // 4. TROUVER LA MEILLEURE FUSION VALIDE
-            // On parcourt la liste des couplages et on prend la PREMIÈRE
-            // qui relie deux clusters ACTIFS et DIFFÉRENTS.
             for (PaireClass currentPair : sortedCouplings) {
                 cluster1 = findClusterContaining(activeClusters, currentPair.getSignClassA());
                 cluster2 = findClusterContaining(activeClusters, currentPair.getSignClassB());
@@ -52,15 +49,27 @@ public final class Dendrogramme {
             }
 
             if (bestPairToMerge == null) {
-                // S'il n'y a plus de fusion possible, on arrête.
                 break;
             }
 
             // 5. EFFECTUER LA FUSION
             activeClusters.remove(cluster1);
             activeClusters.remove(cluster2);
-            DendroNode mergedCluster = new DendroNode(cluster1, cluster2, bestPairToMerge.getCouplage());
+
+            // ======================================================================
+            // === LA CORRECTION FINALE ET CRUCIALE EST ICI ===
+            // ======================================================================
+            // La hauteur n'est pas le couplage, mais la "distance".
+            // On la calcule comme l'inverse de la similarité (couplage).
+            double hauteur = 1.0 - bestPairToMerge.getCouplage();
+
+            DendroNode mergedCluster = new DendroNode(cluster1, cluster2, hauteur);
+            // ======================================================================
+
             activeClusters.add(mergedCluster);
+
+            // On peut retirer la paire utilisée pour optimiser légèrement les tours suivants.
+            sortedCouplings.remove(bestPairToMerge);
         }
 
         if (activeClusters.isEmpty()) {
