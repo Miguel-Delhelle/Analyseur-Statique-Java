@@ -36,34 +36,41 @@ export class D3DendrogramRenderer {
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        // --- Layout D3 ---
         const hierarchyRoot = d3.hierarchy(d3Data, d => d.children);
 
-        // Tri des enfants pour éviter les croisements
-        hierarchyRoot.each(d => {
-            if (d.children) {
-                d.children.sort((a, b) => a.leaves().length - b.leaves().length);
-            }
-        });
+        // Tri pour éviter les croisements (votre méthode est bonne)
+        hierarchyRoot.sort((a, b) => a.leaves().length - b.leaves().length);
 
         const clusterLayout = d3.cluster<D3HierarchyNode>().size([width, height]);
         clusterLayout(hierarchyRoot);
 
-        const maxHeight = d3.max(hierarchyRoot.descendants(), d => d.data.value)!;
-        const yScale = d3.scaleLinear().domain([0, maxHeight]).range([height, 0]);
+        // --- DÉBUT DE LA MODIFICATION ---
+
+        // 1. TROUVER LE MINIMUM ET MAXIMUM DES HAUTEURS *UNIQUEMENT POUR LES NŒUDS DE FUSION*
+        const intermediateNodes = hierarchyRoot.descendants().filter(d => d.children);
+        const minIntermediateHeight = d3.min(intermediateNodes, d => d.data.value) ?? 0;
+        const maxOverallHeight = d3.max(hierarchyRoot.descendants(), d => d.data.value) ?? 1;
+
+        // 2. DÉFINIR LE DOMAINE DE L'ÉCHELLE Y SELON VOTRE RÈGLE
+        const yDomainStart = minIntermediateHeight - 0.1;
+        const yScale = d3.scaleLinear().domain([yDomainStart, maxOverallHeight]).range([height, 0]);
+
+        // --- FIN DE LA MODIFICATION ---
 
         // --- Dessiner les liens ---
         svg.selectAll('path.link')
-            .data(hierarchyRoot.descendants().filter(d => d.children).reverse())
+            .data(hierarchyRoot.descendants().filter(d => d.children)) // On ne dessine que pour les parents
             .enter()
             .append('path')
             .attr('class', 'link')
             .attr('fill', 'none')
             .attr('stroke', '#555')
             .attr('stroke-width', 1.5)
-            .attr('d', d => this.computeLinkPath(d as d3.HierarchyPointNode<D3HierarchyNode>,yScale));
+            // Utilisation de la nouvelle fonction de dessin qui gère les feuilles
+            .attr('d', d => this.computeLinkPath(d, yScale, height));
 
         // --- Dessiner les nœuds (labels) ---
+        // Cette partie est déjà correcte, elle positionne bien les labels en bas
         svg.selectAll('g.label-group')
             .data(hierarchyRoot.leaves())
             .enter()
@@ -87,14 +94,14 @@ export class D3DendrogramRenderer {
             .style('text-anchor', 'middle')
             .style('font-size', '12px')
             .style('font-weight', 'bold')
-            .text('Hauteur de Couplage');
+            .text('Distance de Couplage');
 
-        // --- Conteneur scrollable ---
         this.setupContainer(container);
     }
 
     private transformToD3Hierarchy(node: DendroNode): D3HierarchyNode {
         if (node.leaf && node.className) {
+            // Pour les feuilles, la valeur est utilisée pour le tri, mais pas pour la position Y
             return { name: node.className, value: node.hauteurCoupling };
         }
 
@@ -102,82 +109,33 @@ export class D3DendrogramRenderer {
         if (node.leftChild) children.push(this.transformToD3Hierarchy(node.leftChild));
         if (node.rightChild) children.push(this.transformToD3Hierarchy(node.rightChild));
 
-        return {
-            name: `cluster-${node.hauteurCoupling}`,
-            children,
-            value: node.hauteurCoupling
-        };
+        return { name: `cluster-${node.hauteurCoupling}`, children, value: node.hauteurCoupling };
     }
 
-//     private computeLinkPath(d: d3.HierarchyPointNode<D3HierarchyNode>): string {
-//     if (!d.children || d.children.length === 0) return '';
-
-//     Cas 2 enfants : simple U-shape
-//     if (d.children.length === 2) {
-//         const [left, right] = d.children;
-//         return `M${left.x},${left.y} L${left.x},${d.y} L${right.x},${d.y} L${right.x},${right.y}`;
-//     }
-
-//     Cas général pour 3 enfants ou plus
-//     const xs = d.children.map(c => c.x);
-//     const minX = Math.min(...xs);
-//     const maxX = Math.max(...xs);
-
-//     Commence au premier enfant
-//     let path = `M${d.children[0].x},${d.children[0].y}`;
-//     Monte jusqu'au parent
-//     path += ` L${d.children[0].x},${d.y}`;
-//     Traverser horizontalement tous les enfants
-//     path += ` L${d.children[d.children.length - 1].x},${d.y}`;
-//     Descendre vers chaque enfant
-//     d.children.forEach(c => {
-//         path += ` L${c.x},${c.y}`;
-//     });
-
-//     return path;
-// }
+    /**
+     * Calcule le chemin SVG pour un nœud parent.
+     * Cette fonction gère correctement les feuilles.
+     */
     private computeLinkPath(
         d: d3.HierarchyNode<D3HierarchyNode>,
-        yScale: d3.ScaleLinear<number, number>
+        yScale: d3.ScaleLinear<number, number>,
+        chartHeight: number
     ): string {
-        if (!d.children || d.children.length === 0) return '';
+        if (!d.children) return '';
 
-        // Convert parent coordinates
-        const parentX = d.x!;
         const parentY = yScale(d.data.value);
+        const childLeft = d.children[0];
+        const childRight = d.children[1];
 
-        // Sort children by x to guarantee order and avoid weird line crossings
-        const children = [...d.children].sort((a, b) => a.x! - b.x!);
+        // Pour chaque enfant, on détermine sa position Y.
+        // Si c'est une feuille, sa position Y est TOUJOURS en bas du graphique (chartHeight).
+        // Sinon, c'est la position calculée par l'échelle.
+        const leftY = childLeft.children ? yScale(childLeft.data.value) : chartHeight;
+        const rightY = childRight.children ? yScale(childRight.data.value) : chartHeight;
 
-        if (children.length === 2) {
-            // Optimized 2-child U-shape
-            const [left, right] = children;
-            return `
-                M${left.x},${yScale(left.data.value)}
-                L${left.x},${parentY}
-                L${right.x},${parentY}
-                L${right.x},${yScale(right.data.value)}
-            `.trim();
-        }
-
-        // General case: 3+ children
-        const first = children[0];
-        const last = children[children.length - 1];
-
-        let path = `
-            M${first.x},${yScale(first.data.value)}
-            L${first.x},${parentY}
-            L${last.x},${parentY}
-        `;
-
-        // Draw lines down to each child
-        children.forEach(c => {
-            path += ` L${c.x},${yScale(c.data.value)}`;
-        });
-
-        return path.trim();
+        // On dessine le chemin en "U"
+        return `M${childLeft.x},${leftY} L${childLeft.x},${parentY} L${childRight.x},${parentY} L${childRight.x},${rightY}`;
     }
-
 
     private setupContainer(container: HTMLElement): void {
         const svgElement = container.querySelector('svg');
