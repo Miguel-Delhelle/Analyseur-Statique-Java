@@ -154,7 +154,7 @@ class AnalyzerApp {
         if (!gitUri) { this.showError('Veuillez saisir une URL Git valide'); return; }
         this.showLoader();
         try {
-            const response = await fetch('http://localhost:8090/api/analyses/git', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uriGit: gitUri }) });
+            const response = await fetch('https://java-analyze.delweb.fr/api/analyses/git', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uriGit: gitUri }) });
             if (!response.ok) { throw new Error(`Erreur HTTP: ${response.status}`); }
             const data: AnalysisResponse = await response.json();
             this.currentAnalysisData = data;

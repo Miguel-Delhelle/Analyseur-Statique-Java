@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="log.mode">SIMPLIFIED</Property>
+        <Property name="log.level">info</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console output for development -->
+        <Console name="Console_DETAILED" target="SYSTEM_OUT">
+            <PatternLayout pattern="%style{%d{yyyy-MM-dd}}{bold, bright, black} %style{%d{HH:mm:ss.SSS}}{dim, bright, black} |%highlight{%-5level}{FATAL=bold red bright, ERROR=bold red, WARN=bold yellow, INFO=bold green, DEBUG=bold cyan, TRACE=bold magenta}| %style{%logger{36}}{dim} - %highlight{%msg}{FATAL=bold red, ERROR=red, WARN=dim red bright, INFO=default, DEBUG=dim, TRACE=dim}%n"/>
+        </Console>
+        <Console name="Console_LOCATED" target="SYSTEM_OUT">
+            <PatternLayout pattern="%highlight{%logger{36}}{FATAL=dim, ERROR=dim, WARN=dim, INFO=hidden, DEBUG=dim, TRACE=dim} - %highlight{%msg}{FATAL=bold red, ERROR=red, WARN=dim red bright, INFO=default, DEBUG=dim, TRACE=dim}%n"/>
+        </Console>
+        <Console name="Console_SIMPLIFIED" target="SYSTEMOUT">
+            <PatternLayout pattern="%highlight{%msg}{FATAL=bold red, ERROR=red, WARN=dim red bright, INFO=default, DEBUG=dim, TRACE=dim}%n"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="${sys:log.level:-info}">
+            <AppenderRef ref="Console${sys:log.mode}"/>
+        </Root>
+    </Loggers>
+</Configuration>

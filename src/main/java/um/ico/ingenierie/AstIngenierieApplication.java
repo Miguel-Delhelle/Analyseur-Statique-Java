@@ -13,7 +13,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class AstIngenierieApplication {
 
-    public static void main(String[] args) {
+        static {
+            if (System.getProperty("log.mode") == null)
+                System.setProperty("log.mode", "DETAILED");
+            if (System.getProperty("log.level") == null)
+                System.setProperty("log.level", "debug");
+        }
+
+
+        public static void main(String[] args) {
+
         SpringApplication.run(AstIngenierieApplication.class, args);
     }
 }

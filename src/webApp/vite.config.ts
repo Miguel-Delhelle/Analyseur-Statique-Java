@@ -6,7 +6,7 @@ export default defineConfig({
     // Configure Vite pour rediriger les appels /api vers le backend Spring Boot
     proxy: {
       '/api': {
-        target: 'http://localhost:8090', // L'adresse de ton serveur Spring
+        target: 'https://java-analyze.delweb.fr/', // L'adresse de ton serveur Spring
         changeOrigin: true, // Nécessaire pour les requêtes cross-origin
       },
     },

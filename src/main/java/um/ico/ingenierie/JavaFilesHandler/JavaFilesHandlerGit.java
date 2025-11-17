@@ -69,8 +69,9 @@ public class JavaFilesHandlerGit implements IJavaFilesHandler, AutoCloseable {
                     .filter(Files::isRegularFile)
                     .filter(path -> {
                         String pathAsString = path.toString();
-                        return pathAsString.endsWith(".java") &&
-                                pathAsString.contains(srcMainPathFragment);
+                        return pathAsString.endsWith(".java") ;
+                        //&&
+                                //pathAsString.contains(srcMainPathFragment);
                     })
                     .collect(Collectors.toList());
         }

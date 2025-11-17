@@ -53,7 +53,7 @@ public class CodeAnalyzer {
         this.filesHandler = new JavaFilesHandlerPath(path);
     }
 
-    public CodeAnalyzer(IJavaFilesHandler javaFilesHandler) throws IOException {
+    public CodeAnalyzer(IJavaFilesHandler javaFilesHandler) {
         this.filesHandler = javaFilesHandler;
     }
 
@@ -119,7 +119,7 @@ public class CodeAnalyzer {
         //return AnalysisResponse.from(metricsData,callGraph);
     }
 
-    private CompilationUnit initCu(String[] classPath,String[] sources,Path filePath) throws IOException {
+    private CompilationUnit initCu(String[] classPath,String[] sources,Path filePath) throws NoCompilationUnitExceptions, IOException {
         ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
         parser.setResolveBindings(true);
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
