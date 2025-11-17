@@ -35,6 +35,8 @@ public class CodeAnalyzer {
 
     private static final Logger log = LoggerFactory.getLogger(CodeAnalyzer.class);
 
+    private final boolean useSpoon = true;
+
     private IJavaFilesHandler filesHandler;
 
     public CodeAnalyzer() {

@@ -435,6 +435,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Result.CodeAnalyzerResult;
 import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
 import um.ico.ingenierie.Analysis.Visitor.JdtVisitor;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
@@ -477,7 +478,7 @@ public class CodeAnalyzer {
         this.filesHandler = javaFilesHandler;
     }
 
-    public AnalysisResponse analyze() {
+    public CodeAnalyzerResult analyze() {
 
         log.info("Démarrage de l'analyse pour le projet situé à : '{}'", this.filesHandler.getRootPath());
         log.debug("Nombre de fichiers .java trouvés : {}", this.filesHandler.getAllPathJava().size());
@@ -508,7 +509,8 @@ public class CodeAnalyzer {
                 throw new RuntimeException(e);
             }
         }
-        return AnalysisResponse.from(metricsData,callGraph);
+        return new CodeAnalyzerResult(metricsData,callGraph);
+        //return AnalysisResponse.from(metricsData,callGraph);
     }
 
     private CompilationUnit initCu(String[] classPath,String[] sources,Path filePath) throws IOException {
@@ -1514,7 +1516,7 @@ package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import java.util.*;
 
 public class PaireClass{
 
@@ -1535,9 +1537,22 @@ public class PaireClass{
         }
     }
 
-    public boolean equals(PaireClass that) {
-        return (signClassA.equals(that.signClassA) && signClassB.equals(that.signClassB)) ||
-                (signClassA.equals(that.signClassB) && signClassB.equals(that.signClassA));
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof PaireClass)) return false;
+
+        PaireClass that = (PaireClass) obj;
+        return (this.signClassA.equals(that.signClassA) && this.signClassB.equals(that.signClassB))
+                || (this.signClassA.equals(that.signClassB) && this.signClassB.equals(that.signClassA));
+    }
+    @Override
+    public int hashCode() {
+        // ordre indépendant : on trie les deux noms
+        String c1 = signClassA.compareTo(signClassB) <= 0 ? signClassA : signClassB;
+        String c2 = signClassA.compareTo(signClassB) > 0 ? signClassA : signClassB;
+
+        return Objects.hash(c1, c2);
     }
 
     public String twoSignature(){
@@ -1565,6 +1580,18 @@ public class PaireClass{
         log.info("Couplage du couple: "+this.couplage);
     }
 
+    public boolean contains(String nameOfClass){
+        if (this.getSignClassA().equals(nameOfClass)){
+            return true;
+        }
+        else if (this.getSignClassB().equals(nameOfClass)){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
     public String getSignClassA() {
         return signClassA;
     }
@@ -1580,106 +1607,190 @@ public class PaireClass{
     public double getCouplage() {
         return couplage;
     }
+    public String getOtherClass(String className){
+        if (className.equals(signClassA)){
+            return signClassB;
+        }else if (className.equals(signClassB)){
+            return signClassA;
+        }else {
+            return null;
+        }
+    }
+
+    public static List<PaireClass> toutLesCouplesDe(String nameOfClass, Collection<PaireClass> inCollection){
+        List<PaireClass> listDeCoupleOfThatClass = new ArrayList<PaireClass>();
+        for (PaireClass paireClass : inCollection){
+            if (paireClass.contains(nameOfClass)){
+                listDeCoupleOfThatClass.add(paireClass);
+            }
+        }
+        return listDeCoupleOfThatClass;
+    }
 }
 ===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MacroGraph/Dendro/DendroNode.java =====
 package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
-public class DendroNode {
+public final class DendroNode {
 
-    private DendroNode leftChild;
-    private DendroNode rightChild;
+    private final DendroNode leftChild;
+    private final DendroNode rightChild;
+    private final double hauteurCoupling;
+    private final String className; // Non-null SEULEMENT pour les feuilles
+    private final Set<String> classContenu;
 
-    private double hauteurCoupling;
-
-    private String className;
-
-    //Conteneur final
-    // On utilise Set pour avoir des éléments unique et non ordonnées
-    private Set<String> classContenu;
-
-    // Constructeur vide protégé pour peut être des itérations plus tard avec des librarie comme JPA Hibernate
-    // Qui en nécessite par défaut
-    protected DendroNode(){};
-
-    // Constructeur pour les Noeuds feuille
-    public DendroNode(String className){
+    public DendroNode(String className) {
+        if (className == null || className.isEmpty()) {
+            throw new IllegalArgumentException("Le nom de la classe ne peut pas être nul ou vide pour une feuille.");
+        }
         this.leftChild = null;
         this.rightChild = null;
         this.hauteurCoupling = 0.0;
         this.className = className;
+        this.classContenu = Collections.singleton(className);
     }
 
-    //Constructeur pour les noeuds représentant les fusions entre deux noeuds
-
-    public DendroNode(DendroNode child1, DendroNode child2, double couplingValue){
+    public DendroNode(DendroNode child1, DendroNode child2, double couplingValue) {
+        if (child1 == null || child2 == null) {
+            throw new IllegalArgumentException("Les enfants d'un nœud de fusion ne peuvent pas être nuls.");
+        }
         this.leftChild = child1;
         this.rightChild = child2;
         this.hauteurCoupling = couplingValue;
-        //TODO METTRE TOUTES LES CLASSES dans un noeud pour l'algo DENDOGRAMME
+        this.className = null; // UN NOEUD DE FUSION N'A PAS DE NOM DE CLASSE
+        this.classContenu = new HashSet<>(child1.getClassContenu());
+        this.classContenu.addAll(child2.getClassContenu());
     }
 
-    public boolean isLeaf(){
-        if (className == null){return true;}
-        else {return false;}
+    // LA DÉFINITION CORRECTE DE "isLeaf"
+    public boolean isLeaf() {
+        return this.className != null;
     }
 
+    // --- GETTERS ---
+    public DendroNode getLeftChild() { return leftChild; }
+    public DendroNode getRightChild() { return rightChild; }
+    public double getHauteurCoupling() { return hauteurCoupling; }
+    public String getClassName() { return className; }
+    public Set<String> getClassContenu() { return classContenu; }
 
-    public DendroNode getLeftChild() {
-        return leftChild;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DendroNode that = (DendroNode) o;
+        return classContenu.equals(that.classContenu);
     }
 
-    public DendroNode getRightChild() {
-        return rightChild;
-    }
-
-    public double getHauteurCoupling() {
-        return hauteurCoupling;
-    }
-
-    public String getClassName() {
-        return className;
-    }
-
-    public Set<String> getClassContenu() {
-        return classContenu;
+    @Override
+    public int hashCode() {
+        return Objects.hash(classContenu);
     }
 }
-
 ===== ./main/java/um/ico/ingenierie/Analysis/Models/Graph/MacroGraph/Dendro/Dendrogramme.java =====
 package um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
 import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
 import um.ico.ingenierie.Common.utils.IcoUtils;
+import um.ico.ingenierie.Common.utils.PairNormalisation;
 
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
-public class Dendrogramme {
+public final class Dendrogramme {
 
+    private Dendrogramme() {} // Classe non instanciable
 
-    public Dendrogramme(){
-    }
+    /**
+     * Construit le dendrogramme complet à partir d'une liste de couplages.
+     *
+     * @param allCouplings La liste de toutes les {@link PaireClass} calculées pour l'application.
+     * @return Le {@link DendroNode} racine de l'arbre hiérarchique complet.
+     */
+    public static DendroNode construct(List<PaireClass> allCouplings) {
+        // 1. PRÉPARATION : Trier les couplages du plus FORT au plus FAIBLE.
+        List<PaireClass> sortedCouplings = new ArrayList<>(allCouplings);
+        sortedCouplings.sort(Comparator.comparingDouble(PaireClass::getCouplage).reversed());
 
-
-    public static Set<DendroNode> constructDendo(List<PaireClass> listCoupling){
-        List<PaireClass> classList = CouplingGraph.triSurCouplingScore(listCoupling);
-        Set<String> classSet = IcoUtils.getAllClass_From(classList, true);
-        for (String strClass: classSet){
+        // 2. INITIALISATION : Créer un cluster-feuille pour chaque classe.
+        Set<String> allClassNames = IcoUtils.getAllClass_From(allCouplings, true);
+        Set<DendroNode> activeClusters = new HashSet<>();
+        for (String className : allClassNames) {
+            activeClusters.add(new DendroNode(className));
         }
 
+        // 3. BOUCLE DE FUSION : Continuer tant qu'il y a plus d'un cluster.
+        while (activeClusters.size() > 1) {
+            PaireClass bestPairToMerge = null;
+            DendroNode cluster1 = null;
+            DendroNode cluster2 = null;
+
+            // 4. TROUVER LA MEILLEURE FUSION VALIDE
+            for (PaireClass currentPair : sortedCouplings) {
+                cluster1 = findClusterContaining(activeClusters, currentPair.getSignClassA());
+                cluster2 = findClusterContaining(activeClusters, currentPair.getSignClassB());
+
+                if (cluster1 != null && cluster2 != null && !cluster1.equals(cluster2)) {
+                    bestPairToMerge = currentPair;
+                    break;
+                }
+            }
+
+            if (bestPairToMerge == null) {
+                break;
+            }
+
+            // 5. EFFECTUER LA FUSION
+            activeClusters.remove(cluster1);
+            activeClusters.remove(cluster2);
+
+            // ======================================================================
+            // === LA CORRECTION FINALE ET CRUCIALE EST ICI ===
+            // ======================================================================
+            // La hauteur n'est pas le couplage, mais la "distance".
+            // On la calcule comme l'inverse de la similarité (couplage).
+            double hauteur = 1.0 - bestPairToMerge.getCouplage();
+
+            DendroNode mergedCluster = new DendroNode(cluster1, cluster2, hauteur);
+            // ======================================================================
+
+            activeClusters.add(mergedCluster);
+
+            // On peut retirer la paire utilisée pour optimiser légèrement les tours suivants.
+            sortedCouplings.remove(bestPairToMerge);
+        }
+
+        if (activeClusters.isEmpty()) {
+            return null;
+        }
+        return activeClusters.iterator().next();
     }
 
-    public Set<DendroNode> initLeafs(Set<String> classSet){
-        Set<DendroNode> dendro = new TreeSet<DendroNode>();
-        for (String strClass: classSet){
-            dendro.add(new DendroNode(strClass));
+    /**
+     * Méthode utilitaire pour trouver le cluster actif qui contient une classe donnée.
+     */
+    private static DendroNode findClusterContaining(Set<DendroNode> clusters, String className) {
+        for (DendroNode cluster : clusters) {
+            if (cluster.getClassContenu().contains(className)) {
+                return cluster;
+            }
         }
-        return dendro;
+        return null;
     }
+}
+===== ./main/java/um/ico/ingenierie/Analysis/Result/CodeAnalyzerResult.java =====
+package um.ico.ingenierie.Analysis.Result;
+
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+
+public record CodeAnalyzerResult(MetricsData metricsData, CallGraph callGraph) {
 }
 
 ===== ./main/java/um/ico/ingenierie/Analysis/Result/SingleFileAnalysisResult.java =====
@@ -1720,33 +1831,6 @@ public class SingleFileAnalysisResult {
     public void setFoundClass(AbstractSourceClass foundClass) {
         this.foundClass = foundClass;
     }
-}
-
-===== ./main/java/um/ico/ingenierie/Analysis/Service/AnalysisService.java =====
-package um.ico.ingenierie.Analysis.Service;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import um.ico.ingenierie.Analysis.CodeAnalyzer;
-import um.ico.ingenierie.Api.Response.AnalysisResponse;
-import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
-
-import java.io.IOException;
-
-@Service
-public class AnalysisService {
-
-    private static final Logger log = LoggerFactory.getLogger(AnalysisService.class);
-
-
-   public AnalysisResponse analyzeProject(IJavaFilesHandler javaFilesHandler) throws IOException{
-        log.info("Le service d'analyse est appelé pour", javaFilesHandler);
-        //System.out.println(javaFilesHandler.javaToString());
-        CodeAnalyzer ca = new CodeAnalyzer(javaFilesHandler);
-        return ca.analyze();
-    }
-
 }
 
 ===== ./main/java/um/ico/ingenierie/Common/utils/IcoUtils.java =====
@@ -1931,6 +2015,34 @@ public final class IcoUtils {
     }
 }
 
+===== ./main/java/um/ico/ingenierie/Common/utils/PairNormalisation.java =====
+package um.ico.ingenierie.Common.utils;
+
+import java.util.Objects;
+
+public final class PairNormalisation {
+
+    private PairNormalisation() {} // empêche l'instanciation
+
+    /**
+     * Retourne un tableau où les deux chaînes sont
+     * triées de façon lexicographique et null-safe.
+     * Toujours déterministe :
+     *  - normalizePair("B","A") → ["A","B"]
+     *  - normalizePair("A","A") → ["A","A"]
+     */
+    public static String[] normalizePair(String a, String b) {
+        Objects.requireNonNull(a, "first value cannot be null");
+        Objects.requireNonNull(b, "second value cannot be null");
+
+        if (a.compareTo(b) <= 0) {
+            return new String[] { a, b };
+        } else {
+            return new String[] { b, a };
+        }
+    }
+}
+
 ===== ./main/java/um/ico/ingenierie/Common/Exceptions/NoValidZipJavaSourceFilesException.java =====
 package um.ico.ingenierie.Common.Exceptions;
 
@@ -2092,7 +2204,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import um.ico.ingenierie.Analysis.Service.AnalysisService;
+import um.ico.ingenierie.Service.AnalysisService;
 import um.ico.ingenierie.Api.Request.GitAnalysisRequest;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
@@ -2141,25 +2253,24 @@ public class AnalysisController {
 ===== ./main/java/um/ico/ingenierie/Api/Response/AnalysisResponse.java =====
 package um.ico.ingenierie.Api.Response;
 
-import um.ico.ingenierie.Analysis.Models.MetricsData;
-import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.DendroNode;
 import um.ico.ingenierie.Api.DTO.CouplingGraphDTO;
 import um.ico.ingenierie.Api.DTO.CallGraphDTO;
 import um.ico.ingenierie.Api.DTO.MetricsDto;
 
-public record AnalysisResponse(MetricsDto metricsDto, GraphDTO graphDTO, String basePackage, GraphCouplingDTO treeCoupling) {
-    public static AnalysisResponse from(MetricsData metricsData, CallGraph graphAppel) {
-
-        MetricsDto metricsDto1 = MetricsDto.from(metricsData);
-        GraphDTO callGraph = GraphDTO.from(graphAppel);
-        String basePackage = metricsData.determineBasePackage();
-        //Map<String, PaireClass> treeCouplingMap = CouplingService.TreeCoupling(graphAppel) ;
-
-        GraphCouplingDTO treeCoupling = GraphCouplingDTO.from(graphAppel);
-
-
-        return new AnalysisResponse(metricsDto1,callGraph,basePackage,treeCoupling);
-    }
+public record AnalysisResponse(MetricsDto metricsDto, CallGraphDTO graphDTO, String basePackage, CouplingGraphDTO treeCoupling, DendroNode rootDendro) {
+//    public static AnalysisResponse from(MetricsData metricsData, CallGraph graphAppel) {
+//
+//        MetricsDto metricsDto1 = MetricsDto.from(metricsData);
+//        GraphDTO callGraph = GraphDTO.from(graphAppel);
+//        String basePackage = metricsData.determineBasePackage();
+//        //Map<String, PaireClass> treeCouplingMap = CouplingService.TreeCoupling(graphAppel) ;
+//
+//        GraphCouplingDTO treeCoupling = GraphCouplingDTO.from(graphAppel);
+//
+//
+//        return new AnalysisResponse(metricsDto1,callGraph,basePackage,treeCoupling);
+//    }
 }
 
 
@@ -2182,7 +2293,39 @@ public record PaireClassDTO(String classA, String classB, int nbrOfLink, double 
     }
 }
 
-===== ./main/java/um/ico/ingenierie/Api/DTO/GraphDTO.java =====
+===== ./main/java/um/ico/ingenierie/Api/DTO/CouplingGraphDTO.java =====
+package um.ico.ingenierie.Api.DTO;
+
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public record CouplingGraphDTO(List<PaireClassDTO> graphCoupling) {
+
+    public static CouplingGraphDTO from(CallGraph callGraph){
+
+        List<PaireClass> arbreCouplageNoDTO = CouplingGraph.CouplingGraph(callGraph);
+        List<PaireClassDTO> graphcouplageDTO = new ArrayList<>();
+        arbreCouplageNoDTO.forEach((value) -> {
+            graphcouplageDTO.add(PaireClassDTO.from(value));
+        });
+        return new CouplingGraphDTO(graphcouplageDTO);
+    }
+
+    public static CouplingGraphDTO from(List<PaireClass> couplingGraph){
+
+        List<PaireClassDTO> graphcouplageDTO = new ArrayList<>();
+        couplingGraph.forEach((value) -> {
+            graphcouplageDTO.add(PaireClassDTO.from(value));
+        });
+        return new CouplingGraphDTO(graphcouplageDTO);
+    }
+}
+
+===== ./main/java/um/ico/ingenierie/Api/DTO/CallGraphDTO.java =====
 package um.ico.ingenierie.Api.DTO;
 
 import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
@@ -2191,43 +2334,15 @@ import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.Edge;
 import java.util.Map;
 import java.util.Set;
 
-public record GraphDTO(Map<String, Set<Edge>> adjacencyList) {
+public record CallGraphDTO(Map<String, Set<Edge>> adjacencyList) {
 
     /**
      * Factory method pour créer le DTO à partir des résultats de l'analyse.
      * @param callGraph L'objet CallGraph contenant la structure du graphe.
      * @return Une nouvelle instance de GraphDotDto.
      */
-    public static GraphDTO from(CallGraph callGraph) {
-        return new GraphDTO(callGraph.getAdjacencyList());
-    }
-}
-
-===== ./main/java/um/ico/ingenierie/Api/DTO/GraphCouplingDTO.java =====
-package um.ico.ingenierie.Api.DTO;
-
-import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
-import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
-import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
-import um.ico.ingenierie.Common.utils.IcoUtils;
-
-import java.util.ArrayList;
-import java.util.List;
-
-public record GraphCouplingDTO(List<PaireClassDTO> graphCoupling) {
-
-    public static GraphCouplingDTO from(CallGraph callGraph){
-
-        List<PaireClass> arbreCouplageNoDTO = CouplingGraph.CouplingGraph(callGraph);
-
-        //System.out.println(IcoUtils.getAllClass_From(arbreCouplageNoDTO,true));
-        List<PaireClassDTO> graphcouplageDTO = new ArrayList<>();
-        arbreCouplageNoDTO.forEach((value) -> {
-            graphcouplageDTO.add(PaireClassDTO.from(value));
-        });
-        //System.out.println(graphcouplageDTO);
-
-        return new GraphCouplingDTO(graphcouplageDTO);
+    public static CallGraphDTO from(CallGraph callGraph) {
+        return new CallGraphDTO(callGraph.getAdjacencyList());
     }
 }
 
@@ -2258,3 +2373,59 @@ public record MetricsDto(
         ); //TODO Trouvez un moyen pour renvoyez les objets complexes "AbstractSourceClass"
     }
 }
+===== ./main/java/um/ico/ingenierie/Service/AnalysisService.java =====
+package um.ico.ingenierie.Service;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import um.ico.ingenierie.Analysis.CodeAnalyzer;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.CouplingGraph;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Coupling.PaireClass;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.DendroNode;
+import um.ico.ingenierie.Analysis.Models.Graph.MacroGraph.Dendro.Dendrogramme;
+import um.ico.ingenierie.Analysis.Models.Graph.MicroGraph.CallGraph;
+import um.ico.ingenierie.Analysis.Models.MetricsData;
+import um.ico.ingenierie.Analysis.Result.CodeAnalyzerResult;
+import um.ico.ingenierie.Api.DTO.CallGraphDTO;
+import um.ico.ingenierie.Api.DTO.CouplingGraphDTO;
+import um.ico.ingenierie.Api.DTO.MetricsDto;
+import um.ico.ingenierie.Api.Response.AnalysisResponse;
+import um.ico.ingenierie.Common.utils.IcoUtils;
+import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
+
+import java.io.IOException;
+import java.util.List;
+
+@Service
+public class AnalysisService {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalysisService.class);
+
+
+   public AnalysisResponse analyzeProject(IJavaFilesHandler javaFilesHandler) throws IOException{
+        log.info("Le service d'analyse est appelé pour", javaFilesHandler);
+        //System.out.println(javaFilesHandler.javaToString());
+        CodeAnalyzer ca = new CodeAnalyzer(javaFilesHandler);
+       CodeAnalyzerResult caResult = ca.analyze();
+
+       MetricsData metricsData = caResult.metricsData();
+       CallGraph callGraph = caResult.callGraph();
+
+       List<PaireClass> arbreCouplageNoDTO = CouplingGraph.CouplingGraph(callGraph);
+
+
+       DendroNode rootDendro = Dendrogramme.construct(arbreCouplageNoDTO);
+       String basePackage = IcoUtils.determineBasePackage(arbreCouplageNoDTO);
+
+       //init DTO
+       MetricsDto metricsDto = MetricsDto.from(metricsData);
+       CallGraphDTO callGraphDTO = CallGraphDTO.from(callGraph);
+       CouplingGraphDTO couplingGraphDTO = CouplingGraphDTO.from(arbreCouplageNoDTO);
+
+       System.out.println(rootDendro);
+       return new AnalysisResponse(metricsDto,callGraphDTO,basePackage,couplingGraphDTO,rootDendro);
+    }
+
+}
+
