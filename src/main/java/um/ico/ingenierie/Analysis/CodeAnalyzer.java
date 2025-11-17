@@ -3,12 +3,18 @@ package um.ico.ingenierie.Analysis;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jgit.lib.NullProgressMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import spoon.Launcher;
+import spoon.reflect.CtModel;
+import spoon.reflect.declaration.CtType;
 import um.ico.ingenierie.Analysis.Models.MetricsData;
 import um.ico.ingenierie.Analysis.Result.CodeAnalyzerResult;
 import um.ico.ingenierie.Analysis.Result.SingleFileAnalysisResult;
+import um.ico.ingenierie.Analysis.Visitor.IVisitor;
 import um.ico.ingenierie.Analysis.Visitor.JdtVisitor;
+import um.ico.ingenierie.Analysis.Visitor.SpoonVisitor;
 import um.ico.ingenierie.Api.Response.AnalysisResponse;
 import um.ico.ingenierie.Common.Exceptions.NoCompilationUnitExceptions;
 import um.ico.ingenierie.JavaFilesHandler.IJavaFilesHandler;
@@ -65,22 +71,49 @@ public class CodeAnalyzer {
         CallGraph callGraph = new CallGraph();
 
         for (Path filePath : this.filesHandler.getAllPathJava()){
-            try{
-                CompilationUnit cu = initCu(classPath,sources,filePath);
-                JdtVisitor visitor = new JdtVisitor(cu);
-                cu.accept(visitor);
+                IVisitor visitor = null;
+                if (useSpoon){
+                    try {
 
+                        Launcher launcher = new Launcher();
+                        log.info("Launcher Spoon démarée ");
+
+                        launcher.addInputResource(filePath.toString());
+                        log.info("add Input Spoon démarée ");
+
+                        launcher.getEnvironment().setNoClasspath(true);
+                        log.info("Class Path démarée ");
+
+
+                        CtModel model = launcher.buildModel();
+                        log.info("Build Model Spoon démarée ");
+
+
+                        CtType<?> type = model.getAllTypes().stream().findFirst().orElse(null);
+
+
+                        log.info("Contexte Spoon démarée ");
+                        visitor = new SpoonVisitor();
+                        ((SpoonVisitor) visitor).scan(type);
+                    }catch(Exception e){
+                            e.printStackTrace();
+                        }
+
+                }else {
+                    try {
+                        CompilationUnit cu = initCu(classPath, sources, filePath);
+                        visitor = new JdtVisitor(cu);
+                        cu.accept((JdtVisitor) visitor);
+                    }catch(Exception e){
+                            e.printStackTrace();
+                        }
+                }
                 SingleFileAnalysisResult singleFileAnalysisResult = visitor.getResult();
 
                 log.info("Analyse du fichier "+filePath.toString()+"terminée.");
 
                 metricsData.addClass(singleFileAnalysisResult.getFoundClass());
                 callGraph.addEdges(singleFileAnalysisResult.getFoundEdges());
-
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
         }
         return new CodeAnalyzerResult(metricsData,callGraph);
         //return AnalysisResponse.from(metricsData,callGraph);

@@ -47,7 +47,7 @@ public class AnalysisService {
        CallGraphDTO callGraphDTO = CallGraphDTO.from(callGraph);
        CouplingGraphDTO couplingGraphDTO = CouplingGraphDTO.from(arbreCouplageNoDTO);
 
-       System.out.println(rootDendro);
+       System.out.println(IcoUtils.getAllClass_From(arbreCouplageNoDTO,true));
        return new AnalysisResponse(metricsDto,callGraphDTO,basePackage,couplingGraphDTO,rootDendro);
     }
 
