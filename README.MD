@@ -22,7 +22,7 @@ The analyzer computes the following metrics:
 ## Project Status & Development
 * **Backend:** The entire Java analysis engine was built from scratch with library Spoon a wrapper of Jdt Eclipse.
 * **Frontend:** Currently undergoing a massive architectural overhaul for better performance and maintainability. The initial interface prototype was scaffolded using the Gemini 2.5 Pro language model.
-* **Active Maintenance:** This project is actively developed. Current efforts are focused on codebase refinement, reintroducing robust unit tests, enhancing exception handling, and fixing bugs.
+* **Active Maintenance:** This project is actively developed. Current efforts are focused on codebase refinement, reintroducing robust unit tests, enhancing exception handling, and fixing bugs. **No release and installer actually during this correction, and resumption of this project.**
 
 ## Execution Flow
 Sequence diagram representing the program's Input/Output lifecycle:
