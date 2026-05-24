@@ -1,46 +1,30 @@
-Analyseur de projet Java.
-Projet de TP universitaire, étudiant
-https://gitlab.com/miguel.delhelle-group/Analyseur-Projet-Java
+# Java Static Code Analyzer
 
-Auteur Delhelle Miguel - Master 2 Informatique ico, université de montpellier.
+**Author:** Miguel Delhelle
 
-Ceci est le résultat du premeir TP d'ingenierie logicielle.
-C'est un projet SpringBoot - Maven l'application n'as pas de cli, ni d'interface "bureau".
-Mais une application web qui s'ouvre dans le navigateur. 
-Celle-ci a été réalisé rapidement, par intelligence artificelle générative.
-L'idée était de ne consacrer que peu de ressource intellectuelles a sa réalisation pour ce premier TP. 
-Pour la suite elle sera mis à jour pour devenir plus "authentique". 
+This program is a static code analyzer written in Java. It extracts key metrics from a codebase to evaluate its structure and health.
 
-L'idée de la petite appli web qui tourne, est conforme à ce qui se fait technologiquement à l'heure actuelle.
-Beaucoup de solutions logicielles préfère éxécuter l'interface directement dans le navigateur, afin de profiter de la portabilité de celui-ci. 
-Et également des librairies de développement frontend très avancée dans les écosystème javascript et php.
+## Features & Metrics
+The analyzer computes the following metrics:
+* Total number of packages, classes, and methods
+* Total lines of code
+* Average number of methods per class
+* Average lines of code per method
+* Average number of attributes per class
 
+## Architecture Analysis & Graphs
+* **Call Graph:** Maps all method invocations across the application.
+* **Coupling Graph:** Calculates the bidirectional coupling between classes.
+    * *Formula:* `Coupling(A,B) = Coupling(B,A)`. It is defined as the number of method calls between two classes divided by the total number of methods in A and B.
+    * *Objective:* Visualizing this data helps identify architectural flaws, encouraging **low coupling and high cohesion** for better long-term maintainability.
+* **Module Clustering:** Groups components into logical modules, visualized through a generated **Dendrogram**.
 
-Joint à ce readme un .jar pour lancer l'application rapidement.
+## Project Status & Development
+* **Backend:** The entire Java analysis engine was built from scratch with library Spoon a wrapper of Jdt Eclipse.
+* **Frontend:** Currently undergoing a massive architectural overhaul for better performance and maintainability. The initial interface prototype was scaffolded using the Gemini 2.5 Pro language model.
+* **Active Maintenance:** This project is actively developed. Current efforts are focused on codebase refinement, reintroducing robust unit tests, enhancing exception handling, and fixing bugs.
 
-Le lancement se fait en double cliquant dessus ou via la commande "java -jar AstJava.jar" .
-Cette commande fonctionne sur tout les OS tant que java est installé et est dans le Path.
+## Execution Flow
+Sequence diagram representing the program's Input/Output lifecycle:
 
-L'application web s'ouvre sur le port 8080 par défaut. Vous êtes libre de modifier l'application properties pour le modifier vous mêmes. 
-
-Quelques test unitaires ont été réalisé, un répertoire "webApp" montre tout le projet frontend.
-Il a été fait rapidement et simplement avec typescript d'installé ainsi que graphviz pour pouvoir visualiser le .dot du graphe d'appel.
-Le graphe d'appel n'est pas un graphe d'appel traditionnelle, mais augmenter. Il représente les classes. Et se concentre uniquement sur le projet analysé directement pas aux appels extérieurs.
-
-Ce qui peut être une mauvaise chose, sur lequel nous reviendrons avec l'itération du TP2. 
-
-Le programme prend en entrée un .zip ou un lien vers un dépot git. 
-
------------------------------------------------------------------------------------
-Potentielle vulnérabilités dans le programme.
-
-Pour les analyser on clone des répertoires git, ou décompresse des .zip .
-Les zip sont accepté jusqu'à 500MO. 
-Celà se clone dans le /tmp du système (sur les linux).
-
-Et les répertoires détruit après, cependant, une faille de sécurité à l'air d'exister à travers ce fonctionnement. 
-
-
-
-
-
+![I/O Sequence Diagram](docs/English/Input_output.png)

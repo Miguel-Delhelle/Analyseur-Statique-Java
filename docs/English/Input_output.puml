@@ -1,0 +1,64 @@
+@startuml
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 150
+skinparam BoxPadding 10
+
+actor "Client / API" as User
+box "Ingestion Phase" #F9F9F9
+participant "IJavaFilesHandler\n(Input Strategy)" as Input
+database "/tmp\nDirectory" as Tmp
+end box
+
+box "Analysis Phase (AST)" #E8F4F8
+participant "CodeAnalyzer\n(Spoon Engine)" as Analyzer
+participant "SpoonVisitor" as Visitor
+end box
+
+box "Calculation Phase" #F0F8E2
+participant "GraphEngine\n(Metrics Generator)" as Graph
+end box
+
+User -> Input : Provides target source\n(Git URL, ZIP, or Local Folder)
+activate Input
+
+alt Strategy: Git Repository
+    Input -> Tmp : git clone to /tmp/ast-project
+else Strategy: ZIP Archive
+    Input -> Tmp : extract to /tmp/ast-project
+else Strategy: Local Folder
+    Input -> Tmp : copy files to /tmp/ast-project
+end
+
+Input -> Analyzer : analyze(projectRootPath)
+activate Analyzer
+
+Analyzer -> Analyzer : MavenLauncher: Build AST\n& Resolve Classpath
+
+Analyzer -> Visitor : rootPackage.accept(visitor)
+activate Visitor
+
+loop Traverse Syntax Tree
+    Visitor -> Visitor : Extract Context\n(Raw Code, Invocations, Types)
+end
+
+Visitor --> Analyzer : Extracted Internal Models
+deactivate Visitor
+
+Analyzer -> Graph : generateCallGraph(models)
+activate Graph
+Graph --> Analyzer : Call Graph
+
+Analyzer -> Graph : calculateCoupling(Call Graph)
+Graph --> Analyzer : Coupling Graph
+
+Analyzer -> Graph : generateDendrogram(Coupling)
+Graph --> Analyzer : Dendrogram (Modularity)
+deactivate Graph
+
+Analyzer --> Input : CodeAnalyzerResult\n(Metrics & Graphs)
+deactivate Analyzer
+
+Input --> User : Full
+
+@enduml

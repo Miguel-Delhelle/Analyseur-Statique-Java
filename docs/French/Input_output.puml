@@ -1,0 +1,65 @@
+@startuml
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 150
+skinparam BoxPadding 10
+
+actor "Client / API" as User
+box "Phase d'Ingestion" #F9F9F9
+participant "IJavaFilesHandler\n(Stratégie d'entrée)" as Input
+database "Répertoire\n/tmp" as Tmp
+end box
+
+box "Phase d'Analyse (AST)" #E8F4F8
+participant "CodeAnalyzer\n(Moteur Spoon)" as Analyzer
+participant "SpoonVisitor" as Visitor
+end box
+
+box "Phase de Calculs" #F0F8E2
+participant "GraphEngine\n(Générateur de métriques)" as Graph
+end box
+
+User -> Input : Fournit la source cible\n(Git URL, ZIP ou Dossier Local)
+activate Input
+
+alt Stratégie : Dépôt Git
+    Input -> Tmp : git clone vers /tmp/ast-project
+else Stratégie : Archive ZIP
+    Input -> Tmp : décompression vers /tmp/ast-project
+else Stratégie : Dossier Local
+    Input -> Tmp : copie des fichiers vers /tmp/ast-project
+end
+
+Input -> Analyzer : analyze(projectRootPath)
+activate Analyzer
+
+Analyzer -> Analyzer : MavenLauncher : Forge de l'AST\net résolution du Classpath
+
+Analyzer -> Visitor : rootPackage.accept(visitor)
+activate Visitor
+
+loop Parcours de l'arbre syntaxique
+    Visitor -> Visitor : Extraction du contexte\n(Code brut, Invocations, Types)
+end
+
+Visitor --> Analyzer : Modèles internes extraits
+deactivate Visitor
+
+Analyzer -> Graph : générerGrapheAppel(modèles)
+activate Graph
+Graph --> Analyzer : Call Graph
+
+Analyzer -> Graph : calculerCouplage(Call Graph)
+Graph --> Analyzer : Graphe de Couplage
+
+Analyzer -> Graph : genererDendrogramme(Couplage)
+Graph --> Analyzer : Dendrogramme (Modularité)
+deactivate Graph
+
+Analyzer --> Input : CodeAnalyzerResult\n(Métriques & Graphes)
+deactivate Analyzer
+
+Input --> User : Restitution complète (JSON)
+deactivate Input
+
+@enduml
